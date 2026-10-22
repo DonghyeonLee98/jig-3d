@@ -1,0 +1,338 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DIY 측정 지그 3D</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one bench (3D stage) beside a parts rail; on a phone the stage sits on top and the rail follows. */
+:root {
+  --bg: #f3f5f2; --panel: #ffffff; --fg: #18211c; --muted: #5d6a62; --line: #d9dfd9;
+  --accent: #1f6b45;            /* FR4 green */
+  --stock: #d08a1e;             /* ② parts pressed into a jig */
+  --make: #3b6db3;              /* ③ made per jig */
+  --sample: #9aa3ae;            /* sample */
+  --reuse: #2f9e6a;             /* bought once */
+  --stage: #e9ede8;
+  --font-body: "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101513; --panel: #171e1b; --fg: #e4ebe6; --muted: #9aa8a0; --line: #2a3530;
+  --accent: #4fb582; --stock: #e2a242; --make: #6f9be0; --sample: #8b949e; --reuse: #5cc392; --stage: #141b18; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #101513; --panel: #171e1b; --fg: #e4ebe6; --muted: #9aa8a0; --line: #2a3530;
+  --accent: #4fb582; --stock: #e2a242; --make: #6f9be0; --sample: #8b949e; --reuse: #5cc392; --stage: #141b18; color-scheme: dark }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+.app { display: flex; height: 100%; gap: 0; }
+.stage { position: relative; flex: 1 1 auto; min-width: 0; background: var(--stage); }
+#c { display: block; width: 100%; height: 100%; touch-action: none; }
+.rail { flex: 0 0 340px; overflow-y: auto; background: var(--panel); border-left: 1px solid var(--line);
+  padding-block: 18px 28px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 18px; }
+h1 { font-size: 19px; font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+.sub { color: var(--muted); font-size: 12.5px; margin: 2px 0 0; }
+.label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 12.5px; padding: 7px 4px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
+.seg button { border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
+.seg button:nth-child(3n+1) { border-left: 0; }
+.seg button:nth-child(-n+3) { border-top: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+.row { display: flex; align-items: center; gap: 10px; }
+input[type=range] { flex: 1; accent-color: var(--accent); }
+.toggles { display: flex; flex-wrap: wrap; gap: 8px; }
+.chipbtn { font: inherit; font-size: 12.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; }
+.chipbtn[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.legend { display: grid; gap: 6px; font-size: 12.5px; }
+.legend div { display: flex; gap: 8px; align-items: baseline; }
+.sw { width: 10px; height: 10px; border-radius: 2px; flex: 0 0 10px; transform: translateY(1px); }
+.info { border-top: 1px solid var(--line); padding-top: 14px; min-height: 120px; }
+.info h2 { font-size: 15px; margin: 0 0 4px; font-weight: 600; word-break: break-word; }
+.pn { font-family: var(--font-mono); font-size: 12px; color: var(--muted); word-break: break-all; }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; color: #fff; margin: 6px 0; }
+.info p { margin: 4px 0; font-size: 13px; }
+a { color: var(--accent); }
+.reuse { border-top: 1px solid var(--line); padding-top: 14px; }
+.reuse ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; font-size: 12.5px; }
+.reuse li { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.reuse .q { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+.hint { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; font-size: 12px; color: var(--muted); background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 4px 9px; border-radius: 6px; pointer-events: none; }
+.tagl { position: absolute; transform: translate(-50%, -100%); font-size: 12px; font-weight: 600; color: var(--fg); background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); padding: 2px 8px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+.status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; pointer-events: none; }
+@media (max-width: 760px) {
+  .app { flex-direction: column; height: auto; }
+  .stage { flex: none; height: 62svh; min-height: 340px; }
+  .rail { flex: none; border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="app">
+  <div class="stage">
+    <canvas id="c" aria-label="지그 3D 장면"></canvas>
+    <div id="labels"></div>
+    <div class="status" id="status">CAD 모델을 불러오는 중…</div>
+    <div class="hint">끌어서 회전 · 휠/두 손가락으로 확대 · 부품을 누르면 정보</div>
+  </div>
+
+  <aside class="rail">
+    <div>
+      <h1>DIY 측정 지그 3D</h1>
+      <p class="sub">2026-10-22 · 실제 STEP과 같은 형상 (mm) · 탠덤 시료 치수는 가정 · 탠덤 v2는 SMA 다리 간섭 2곳이 있어 v3에서 고침 · PL 캐리어 FFC는 30 mm만 그림</p>
+    </div>
+
+    <div>
+      <p class="label">보기</p>
+      <div class="seg" role="group" aria-label="지그 선택">
+        <button id="v-all" aria-pressed="true">전체</button>
+        <button id="v-tandem" aria-pressed="false">탠덤 v2</button>
+        <button id="v-tandem3" aria-pressed="false">탠덤 v3</button>
+        <button id="v-single_magnet" aria-pressed="false">싱글 자석</button>
+        <button id="v-single_hinge" aria-pressed="false">싱글 힌지</button>
+        <button id="v-carrier" aria-pressed="false">PL 캐리어</button>
+      </div>
+    </div>
+
+    <div>
+      <p class="label">분해</p>
+      <div class="row"><input id="explode" type="range" min="0" max="100" value="0" aria-label="분해 정도"><span id="exv" class="pn">0 %</span></div>
+    </div>
+
+    <div>
+      <p class="label">표시</p>
+      <div class="toggles">
+        <button class="chipbtn" id="t-cat" aria-pressed="false">부품 분류 색</button>
+        <button class="chipbtn" id="t-beam" aria-pressed="false">빛·X선 45° 입사</button>
+        <button class="chipbtn" id="t-spin" aria-pressed="false">천천히 돌리기</button>
+      </div>
+    </div>
+
+    <div class="legend" id="legend">
+      <div><span class="sw" style="background:var(--reuse)"></span><span><b>① 한 번 사면 계속</b> — FFC·중계 기판 (캐리어끼리 같이 씀)</span></div>
+      <div><span class="sw" style="background:var(--stock)"></span><span><b>② 지그에 박는 것</b> — 핀·커넥터·자석·나사·인서트. 넉넉히 사 둔다</span></div>
+      <div><span class="sw" style="background:var(--make)"></span><span><b>③ 지그마다 새로 만듦</b> — PCB, 프레임·뚜껑·기둥·심</span></div>
+      <div><span class="sw" style="background:var(--sample)"></span><span>시료 (참고용)</span></div>
+    </div>
+
+    <div class="info" id="info" aria-live="polite">
+      <h2>부품을 눌러 보세요</h2>
+      <p class="pn">이름, 분류, 사는 곳이 여기 나옵니다.</p>
+    </div>
+
+    <div class="reuse">
+      <p class="label">① 한 번 사면 계속 쓰는 것 (지그 밖, 모델에 없음)</p>
+      <ul>
+        <li><span>SMA–BNC 1 m <span class="pn">Amphenol 245101-04-M1.00</span> · <a href="https://www.digikey.kr/ko/products/detail/amphenol-rf/245101-04-M1-00/4865244" target="_blank" rel="noopener">링크</a></span><span class="q">×4</span></li>
+        <li><span>빔라인용 3 m <span class="pn">245101-04-M3.00</span></span><span class="q">×4</span></li>
+        <li><span>BNC→바나나 <span class="pn">Pomona 1269</span> · <a href="https://www.digikey.kr/ko/products/detail/pomona-electronics/1269/603922" target="_blank" rel="noopener">링크</a></span><span class="q">×2</span></li>
+        <li><span>DB9 연장 1.5 m <span class="pn">L-com CSMN9MF-5</span> · <a href="https://www.digikey.kr/ko/products/detail/l-com/CSMN9MF-5/21288542" target="_blank" rel="noopener">링크</a></span><span class="q">×1</span></li>
+        <li><span>스위치 박스 또는 MPPT-HOLD4 보드</span><span class="q">×1</span></li>
+        <li><span>FFC 8핀 152 mm <span class="pn">Molex 0150200083</span> · <a href="https://www.digikey.kr/ko/products/detail/molex/0150200083/2817728" target="_blank" rel="noopener">링크</a></span><span class="q">캐리어용</span></li>
+        <li><span>FFC → DB9 중계 기판</span><span class="q">×1</span></li>
+        <li><span>진공 튜브 <span class="pn">SMC TU0425</span> · <a href="https://kr.misumi-ec.com/vona2/detail/221006395592/" target="_blank" rel="noopener">링크</a></span><span class="q">1롤</span></li>
+      </ul>
+      <p class="sub" style="margin-top:10px">모든 지그가 같은 접속(소자당 SMA 4개 + 화소 DB9 + M2.5 장착 구멍)이라, PL 장비·빔라인용 지그를 새로 만들어도 ①은 그대로 씁니다.</p>
+    </div>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="jig_models.js"></script>
+<script>
+(function () {
+  const JIGS = [
+    { key: 'tandem', file: 'tandem_jig_261022.glb', x: -172, title: '탠덤 v2 (10.7 mm)' },
+    { key: 'tandem3', file: 'tandem3_jig_261022.glb', x: -86, title: '탠덤 v3 노브 (14.7 mm)' },
+    { key: 'single_magnet', file: 'single_magnet_jig_261022.glb', x: 0, title: '싱글 · 자석 (10.5 mm)' },
+    { key: 'single_hinge', file: 'single_hinge_jig_261022.glb', x: 86, title: '싱글 · 힌지 (10.5 mm)' },
+    { key: 'carrier', file: 'carrier_jig_261022.glb', x: 172, title: 'PL 캐리어 (2.0 mm)' },
+  ];
+  // layer of each part (from the CAD build), used for the exploded view
+  const LAYERS = {"tandem": [["bottom PCB (FR4 1.6, rear window d18, rear pins F-/S-)", 0], ["rear pin Mill-Max 0906-1 (-7.5,-7.5)", 0], ["rear pin Mill-Max 0906-1 (-7.5,+7.5)", 0], ["rear pin Mill-Max 0906-1 (+7.5,-7.5)", 0], ["rear pin Mill-Max 0906-1 (+7.5,+7.5)", 0], ["lower frame (3D print: ledge, keyed pocket, vacuum ring)", 1], ["vacuum barb M5 (optional)", 1], ["ASSUMED sample: Si wafer 25x25x0.25", 2], ["ASSUMED sample: active area 1 cm2", 2], ["ASSUMED sample: Ag grid and dot pads", 2], ["corner posts (3D print, 4)", 3], ["top PCB, spider (FR4 1.6, front pins F+/S+)", 4], ["front pin Mill-Max 0906-1 (-7.5,-7.5)", 4], ["front pin Mill-Max 0906-1 (-7.5,+7.5)", 4], ["front pin Mill-Max 0906-1 (+7.5,-7.5)", 4], ["front pin Mill-Max 0906-1 (+7.5,+7.5)", 4], ["SMA edge jack F+ (top PCB)", 4], ["SMA edge jack S+ (top PCB)", 4], ["SMA edge jack F- (bottom PCB)", 0], ["SMA edge jack S- (bottom PCB)", 0], ["M2.5 screw + nut 1", 5], ["M2.5 screw + nut 2", 5], ["M2.5 screw + nut 3", 5], ["M2.5 screw + nut 4", 5], ["dowel pin d2 1", 5], ["dowel pin d2 2", 5]], "single_magnet": [["bottom PCB (FR4 1.6, 8 pins up, 16 mm film-side window, DB9)", 0], ["pin Mill-Max 0906-1 P1 (-9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P2 (-9.6,-2.8)", 0], ["pin Mill-Max 0906-1 P4 (+9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P3 (+9.6,-2.8)", 0], ["pin Mill-Max 0906-1 ITO_a (-4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_b (+4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_c (-4.4,-10.0)", 0], ["pin Mill-Max 0906-1 ITO_d (+4.4,-10.0)", 0], ["DB9 (4 pixels separately + ITO force/sense)", 0], ["lower frame (3D print, glass edge ledge)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["pocket frame (3D print, 25.2 pocket + corner reliefs, magnets)", 3], ["edge shim 1.2 mm (1.1T ITO; remove for 2.2T FTO)", 4], ["magnetic lid (POM / 3D print, bevelled window 19 -> 25 mm)", 5], ["magnet d6x2 N45 1 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 1 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 2 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 2 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 3 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 3 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 4 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 4 (lid, Supermagnete S-06-02-N)", 5], ["M2.5 screw 1 (from below, into heat-set insert)", 0], ["M2.5 screw 2 (from below, into heat-set insert)", 0], ["M2.5 screw 3 (from below, into heat-set insert)", 0], ["M2.5 screw 4 (from below, into heat-set insert)", 0], ["dowel pin d2 1", 6], ["dowel pin d2 2", 6]], "single_hinge": [["bottom PCB (FR4 1.6, 8 pins up, 16 mm film-side window, DB9)", 0], ["pin Mill-Max 0906-1 P1 (-9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P2 (-9.6,-2.8)", 0], ["pin Mill-Max 0906-1 P4 (+9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P3 (+9.6,-2.8)", 0], ["pin Mill-Max 0906-1 ITO_a (-4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_b (+4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_c (-4.4,-10.0)", 0], ["pin Mill-Max 0906-1 ITO_d (+4.4,-10.0)", 0], ["DB9 (4 pixels separately + ITO force/sense)", 0], ["lower frame (3D print, glass edge ledge)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["pocket frame (3D print, 25.2 pocket + corner reliefs, hinge knuckles + latch magnets)", 3], ["edge shim 1.2 mm (1.1T ITO; remove for 2.2T FTO)", 4], ["hinged lid (POM / 3D print, bevelled window 19 -> 25 mm, opens to -x)", 5], ["magnet d6x2 N45 1 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 1 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 2 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 2 (lid, Supermagnete S-06-02-N)", 5], ["hinge pin d2.5 x 30 (MISUMI MS2.5-30)", 5], ["M2.5 screw 1 (from below, into heat-set insert)", 0], ["M2.5 screw 2 (from below, into heat-set insert)", 0], ["M2.5 screw 3 (from below, into heat-set insert)", 0], ["M2.5 screw 4 (from below, into heat-set insert)", 0]], "carrier": [["carrier PCB (FR4 0.8 mm ENIG, 10 mm window, pads at the jig-pin xy)", 0], ["carrier pads (ENIG, 4 pixels + 4 ITO)", 0], ["silver epoxy dots (room-temperature cure, 8)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["FFC connector Hirose FH12-8S-0.5SH(55) (8 pos, 0.5 mm, bottom contact)", 0], ["FFC Molex 0150200083 (8 pos, 0.5 mm, 152 mm; drawn 30 mm)", 0], ["breakout PCB (FR4 1.6, FFC -> DB9 female, same pin-out as the single jig)", 0], ["FFC connector on the breakout (FH12-8S-0.5SH(55))", 0], ["DB9 female NorComp 182-009-213R171 (breakout)", 0]], "tandem3": [["base plate (Al 6061 black anodised 4.0, flat bottom, cone rear window, blind M3 taps)", 0], ["bottom PCB (FR4 1.6, rear window d18, rear pins F-/S-)", 1], ["rear pin Mill-Max 0906-1 (-7.5,-7.5)", 1], ["rear pin Mill-Max 0906-1 (-7.5,+7.5)", 1], ["rear pin Mill-Max 0906-1 (+7.5,-7.5)", 1], ["rear pin Mill-Max 0906-1 (+7.5,+7.5)", 1], ["lower frame + corner posts (one part, POM: ledge, keyed pocket, vacuum ring, spring pockets)", 2], ["vacuum barb M5 (optional)", 2], ["ASSUMED sample: Si wafer 25x25x0.25", 3], ["ASSUMED sample: active area 1 cm2", 3], ["ASSUMED sample: Ag grid and dot pads", 3], ["fixing screw M3 x 10 1 (lab stock)", 0], ["fixing screw M3 x 10 2 (lab stock)", 0], ["lift spring OD4.5 x 6 free 1", 4], ["lift spring OD4.5 x 6 free 2", 4], ["top PCB, spider (FR4 1.6, front pins F+/S+; lifts on the springs)", 5], ["front pin Mill-Max 0906-1 (-7.5,-7.5)", 5], ["front pin Mill-Max 0906-1 (-7.5,+7.5)", 5], ["front pin Mill-Max 0906-1 (+7.5,-7.5)", 5], ["front pin Mill-Max 0906-1 (+7.5,+7.5)", 5], ["SMA edge jack F+ (top PCB)", 5], ["SMA edge jack S+ (top PCB)", 5], ["SMA edge jack F- (bottom PCB)", 1], ["SMA edge jack S- (bottom PCB)", 1], ["knob 1: M3 x 14 knurled thumb screw (head d10)", 6], ["knob 2: M3 x 14 knurled thumb screw (head d10)", 6], ["dowel pin d2 x 15 1 (guides the spider)", 5], ["dowel pin d2 x 15 2 (guides the spider)", 5]]};
+
+  const DK = 'https://www.digikey.kr/ko/products/detail/';
+  const MI = 'https://kr.misumi-ec.com/vona2/detail/';
+  // name -> what it is, its reuse group and where to buy it
+  function describe(n) {
+    const S = (cat, buy, url, note) => ({ cat, buy, url, note });
+    if (/sample/i.test(n)) return S('sample', /ASSUMED/.test(n) ? 'KIER 탠덤 시료 (치수 가정, 실측 후 수정)' : '우리 마스크 패턴 싱글셀 (new_mask_0919)', null, '시료');
+    if (/^breakout PCB|\(breakout\)|on the breakout/.test(n)) return S('reuse', 'FFC → DB9 중계 기판 (FR4 1.6, 32×22) + NorComp DB9 암', DK + 'norcomp-inc/182-009-213R171/858347', '캐리어 여러 개가 같이 쓴다. 싱글 지그와 같은 핀 배정');
+    if (/^FFC Molex/.test(n)) return S('reuse', 'Molex 0150200083 FFC (8핀 0.5 mm, 152 mm)', DK + 'molex/0150200083/2817728', '캐리어에서 뽑아 다른 캐리어에 꽂는다 · ₩9,893');
+    if (/^FFC connector/.test(n)) return S('stock', 'Hirose FH12-8S-0.5SH(55) FFC 커넥터', DK + 'hirose-electric-co-ltd/FH12-8S-0-5SH-55/4283372', '캐리어마다 1개 · ₩2,424');
+    if (/^silver epoxy/.test(n)) return S('stock', '상온 경화 2액 은 에폭시', null, '캐리어마다 점 8개 · 더미 기판으로 먼저 시험 · 연구실 보유품 확인');
+    if (/^carrier pads/.test(n)) return S('make', '캐리어 패드 (ENIG, 지그 핀과 같은 xy)', 'https://jlcpcb.com/quote', '캐리어 PCB의 일부');
+    if (/^base plate/.test(n)) return S('make', '받침판 알루미늄 6061 흑색 아노다이징 4 mm (CNC)', 'https://jlccnc.com/', '탠덤 v3 · 아랫면 평평, M3 탭');
+    if (/^(lower frame|pocket frame|corner posts|magnetic lid|hinged lid|edge shim)/.test(n))
+      return S('make', '시제품 레진 (JLC3DP) → 본제작 검정 POM CNC (JLCCNC)', 'https://jlccnc.com/', '지그마다 STEP으로 견적');
+    if (/PCB/.test(n) && !/^(SMA|pin|rear pin|front pin)/.test(n)) return S('make', 'JLCPCB 2층 FR4 1.6 mm, ENIG + 검정 마스크', 'https://jlcpcb.com/quote', '$20.90/디자인, 5장 단위 (여분으로 같은 지그를 더 만든다)');
+    if (/^knob/.test(n)) return S('stock', 'M3 × 14 널링 손나사 (머리 Ø10)', null, '탠덤 v3 · 위에서 뚜껑 조임·높이 조절 · 품번 미정');
+    if (/^lift spring/.test(n)) return S('stock', '압축 스프링 OD4.5 × 6 mm', null, '탠덤 v3 · 노브를 풀면 스파이더 PCB를 들어 올림 · 품번 미정');
+    if (/^fixing screw M3/.test(n)) return S('stock', 'M3 × 10 나사 (연구실 재고)', null, '탠덤 v3 받침판 고정');
+    if (/Mill-Max/.test(n)) return S('stock', 'Mill-Max 0906-1-15-20-75-14-11-0', DK + 'mill-max-manufacturing-corp/0906-1-15-20-75-14-11-0/1147049', '지그당 8개 · 100개 구비 권장 (개당 878원)');
+    if (/^SMA/.test(n)) return S('stock', 'Amphenol RF 132322 (1.6 mm 기판용)', DK + 'amphenol-rf/132322/2181040', '지그당 4개 · 10개 구비 (개당 12,567원)');
+    if (/^DB9/.test(n)) return S('stock', 'NorComp 182-009-213R171 (금 플래시)', DK + 'norcomp-inc/182-009-213R171/858347', '지그당 1개 · 10개 구비 (개당 2,782원)');
+    if (/^magnet d6/.test(n)) return S('stock', 'Supermagnete S-06-02-N (Ø6×2, N45)', 'https://www.supermagnete.de/eng/disc-magnets-neodymium/disc-magnet-6mm-2mm_S-06-02-N', '지그당 4–8개 · 40개 구비 (€0.26/개)');
+    if (/hinge pin/.test(n)) return S('stock', 'MISUMI MS2.5-30 (Ø2.5 × 30)', MI + '110100140620/', '힌지 지그당 1개 · 5개 구비');
+    if (/dowel/.test(n)) return S('stock', /x 15/.test(n) ? 'MISUMI MS2-15 (Ø2 × 15, SUJ2)' : 'MISUMI MS2-10 (Ø2, SUJ2)', MI + '110100140620/', '지그당 2개 · 20개 구비');
+    if (/vacuum barb/.test(n)) return S('stock', 'SMC M-5AU-4 (M5 → Ø4 튜브)', MI + '221006291531/', '선택 · 3개 구비');
+    if (/screw/.test(n)) return S('stock', 'MISUMI SCB2.5-8 + ruthex M2.5 인서트', MI + '110300239250/', '지그당 4–8개 · 나사 50개, 인서트 70개 1팩');
+    return S('stock', n, null, '');
+  }
+  const CAT = { reuse: ['① 한 번 사면 계속', '--reuse'], stock: ['② 지그에 박는 것', '--stock'], make: ['③ 지그마다 새로 만듦', '--make'], sample: ['시료', '--sample'] };
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  const canvas = document.getElementById('c');
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(35, 1, 1, 5000);
+  const controls = new THREE.OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.maxPolarAngle = Math.PI * 0.49;
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f88, 0.85));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(-120, 220, 160); scene.add(sun);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(160, 80, -120); scene.add(fill);
+
+  // bench: a plate with a 10 mm grid
+  const bench = new THREE.Mesh(new THREE.PlaneGeometry(470, 230), new THREE.MeshStandardMaterial({ color: 0xcfd5cf, roughness: 0.95 }));
+  bench.rotation.x = -Math.PI / 2; bench.position.y = -6.2; scene.add(bench);
+  const grid = new THREE.GridHelper(470, 47, 0x9aa49c, 0xb7bfb8); grid.position.y = -6.15; grid.scale.z = 230 / 470; scene.add(grid);
+
+  const world = new THREE.Group(); world.rotation.x = -Math.PI / 2; scene.add(world);   // CAD z-up -> three y-up
+  const meshes = []; const jigGroups = {}; const beams = [];
+  let selected = null;
+
+  function applyTheme() {
+    const dark = css('--bg').toLowerCase() === '#101513';
+    scene.background = new THREE.Color(css('--stage'));
+    bench.material.color.set(dark ? 0x1d2622 : 0xd4dad3);
+    grid.material.color.set(dark ? 0x33403a : 0xb2bab3);
+    for (const m of meshes) if (m.userData.cat) m.userData.catMat.color.set(css(CAT[m.userData.cat][1]));
+  }
+
+  const loader = new THREE.GLTFLoader();
+  let loaded = 0;
+  JIGS.forEach((j) => {
+    const b64 = (window.JIG_GLB || {})[j.key];
+    const buf = b64 ? Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0)).buffer : null;
+    if (!buf) { document.getElementById('status').textContent = '모델 파일을 불러오지 못했습니다. 새로 고침해 보세요.'; return; }
+    loader.parse(buf, '', (gltf) => {
+      const g = new THREE.Group(); g.position.x = j.x; g.add(gltf.scene); world.add(g); jigGroups[j.key] = g;
+      const layer = Object.fromEntries(LAYERS[j.key]);
+      // GLTFLoader sanitises node names (spaces -> _, drops [ ] . : /) and may add _1; map them back to the CAD names
+      const san = (s) => s.replace(/\s/g, '_').replace(/[\[\]\.:\/]/g, '');
+      const bySan = {}; for (const [n] of LAYERS[j.key]) bySan[san(n)] = n;
+      const lookup = (s) => bySan[s] || bySan[s.replace(/_\d+$/, '')] || null;
+      gltf.scene.traverse((o) => {
+        if (!o.isMesh) return;
+        const pname = lookup(o.name) || (o.parent && lookup(o.parent.name)) || o.name;
+        const d = describe(pname);
+        const ca = o.geometry.getAttribute('color'), base = new THREE.Color();
+        const k = ca && ca.normalized && ca.array instanceof Uint8Array ? 1 / 255 : 1;   // r128 returns raw bytes
+        if (ca) base.setRGB(ca.getX(0) * k, ca.getY(0) * k, ca.getZ(0) * k).convertSRGBToLinear();
+        else if (o.material && o.material.color) base.copy(o.material.color);
+        const real = new THREE.MeshStandardMaterial({ color: base, flatShading: true, roughness: /Mill-Max|SMA|DB9/.test(pname) ? 0.35 : 0.7,
+          metalness: /Mill-Max|SMA|screw|dowel|hinge pin|magnet d6|barb/.test(pname) ? 0.55 : 0.05,
+          transparent: /sample: ITO glass|Si wafer/.test(pname), opacity: /sample: ITO glass/.test(pname) ? 0.55 : 1 });
+        const catMat = new THREE.MeshStandardMaterial({ color: css(CAT[d.cat][1]), flatShading: true, roughness: 0.6, metalness: 0.05 });
+        o.material = real;
+        o.userData = { jig: j.key, name: pname, layer: layer[pname] || 0, z0: o.position.z, real, catMat, cat: d.cat, d };
+        meshes.push(o);
+      });
+      // 45° light / X-ray path onto the sample centre (from +x, the open side of every lid)
+      const box = new THREE.Box3();
+      gltf.scene.traverse((o) => { if (o.isMesh && /sample/.test(o.userData.name || '')) box.expandByObject(o); });
+      const c = box.isEmpty() ? new THREE.Vector3(0, 0, 4) : box.getCenter(new THREE.Vector3());
+      const L = 70, dir = new THREE.Vector3(Math.SQRT1_2, 0, Math.SQRT1_2);
+      const cyl = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, L, 20, 1, true),
+        new THREE.MeshBasicMaterial({ color: 0xff5a36, transparent: true, opacity: 0.55, depthWrite: false }));
+      cyl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      cyl.position.copy(c.clone().add(dir.clone().multiplyScalar(L / 2)));
+      cyl.visible = false; g.add(cyl); beams.push(cyl);
+      if (++loaded === JIGS.length) { document.getElementById('status').hidden = true; applyTheme(); frame('all', true); }
+    }, () => { document.getElementById('status').textContent = j.file + ' 을(를) 읽지 못했습니다. 새로 고침해 보세요.'; });
+  });
+
+  // labels above each jig
+  const labelBox = document.getElementById('labels');
+  const labels = JIGS.map((j) => { const el = document.createElement('div'); el.className = 'tagl'; el.textContent = j.title; labelBox.appendChild(el); return { j, el }; });
+
+  // view selection
+  let view = 'all';
+  function frame(key, instant) {
+    view = key;
+    document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.id === 'v-' + key)));
+    const target = new THREE.Vector3(key === 'all' ? 0 : JIGS.find((j) => j.key === key).x, 4, key === 'carrier' ? -30 : 0);
+    const dist = (key === 'all' ? 300 : (key === 'carrier' ? 130 : 105)) * Math.max(1, (key === 'all' ? 2.0 : 1.1) / camera.aspect);
+    const pos = target.clone().add(new THREE.Vector3(dist * 0.55, dist * 0.62, dist * 0.78));
+    if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) { camera.position.copy(pos); controls.target.copy(target); return; }
+    const p0 = camera.position.clone(), t0 = controls.target.clone(), start = performance.now();
+    (function step(now) { const k = Math.min(1, (now - start) / 600), e = k * k * (3 - 2 * k);
+      camera.position.lerpVectors(p0, pos, e); controls.target.lerpVectors(t0, target, e); if (k < 1) requestAnimationFrame(step); })(start);
+  }
+  JIGS.concat([{ key: 'all' }]).forEach((j) => document.getElementById('v-' + j.key).addEventListener('click', () => frame(j.key)));
+
+  // explode
+  const ex = document.getElementById('explode'), exv = document.getElementById('exv');
+  ex.addEventListener('input', () => { const t = ex.value / 100; exv.textContent = ex.value + ' %';
+    for (const m of meshes) m.position.z = m.userData.z0 + m.userData.layer * 9 * t; });
+
+  // toggles
+  function toggle(id, fn) { const b = document.getElementById(id); b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); fn(on); }); }
+  let catOn = false, spin = false;
+  toggle('t-cat', (on) => { catOn = on; for (const m of meshes) m.material = on ? m.userData.catMat : m.userData.real; highlight(selected); });
+  toggle('t-beam', (on) => beams.forEach((b) => { b.visible = on; }));
+  toggle('t-spin', (on) => { spin = on; controls.autoRotate = on; controls.autoRotateSpeed = 0.8; });
+
+  // picking
+  const ray = new THREE.Raycaster(), ptr = new THREE.Vector2(); let down = null;
+  canvas.addEventListener('pointerdown', (e) => { down = [e.clientX, e.clientY]; });
+  canvas.addEventListener('pointerup', (e) => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+    const r = canvas.getBoundingClientRect(); ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ptr, camera);
+    const hit = ray.intersectObjects(meshes.filter((m) => m.visible), false)[0];
+    select(hit ? hit.object : null);
+  });
+  function highlight(m) { for (const x of meshes) x.material.emissive && x.material.emissive.setHex(0x000000);
+    if (m) m.material.emissive.setHex(0x3a2a00); }
+  const info = document.getElementById('info');
+  function select(m) {
+    selected = m; highlight(m);
+    if (!m) { info.innerHTML = '<h2>부품을 눌러 보세요</h2><p class="pn">이름, 분류, 사는 곳이 여기 나옵니다.</p>'; return; }
+    const d = m.userData.d, [cl, cv] = CAT[d.cat], jig = JIGS.find((j) => j.key === m.userData.jig).title;
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    info.innerHTML = '<h2>' + esc(d.buy) + '</h2><p class="pn">' + esc(m.userData.name) + '</p>' +
+      '<span class="tag" style="background:var(' + cv + ')">' + cl + '</span>' +
+      (d.note ? '<p>' + esc(d.note) + '</p>' : '') + '<p class="sub">' + esc(jig) + ' · 층 ' + m.userData.layer + '</p>' +
+      (d.url ? '<p><a href="' + d.url + '" target="_blank" rel="noopener">판매 페이지 열기 ↗</a></p>' : '');
+  }
+
+  // size + loop
+  function resize() { const r = canvas.parentElement.getBoundingClientRect(); renderer.setSize(r.width, r.height, false);
+    camera.aspect = r.width / Math.max(1, r.height); camera.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(canvas.parentElement); resize();
+  const v = new THREE.Vector3();
+  function tick() {
+    controls.update(); renderer.render(scene, camera);
+    const r = canvas.getBoundingClientRect();
+    for (const { j, el } of labels) {
+      const show = loaded === JIGS.length && (view === 'all' || view === j.key);
+      el.hidden = !show; if (!show) continue;
+      v.set(j.x, 22, 0).project(camera);
+      el.style.left = ((v.x + 1) / 2 * r.width) + 'px'; el.style.top = ((1 - v.y) / 2 * r.height) + 'px';
+    }
+    requestAnimationFrame(tick);
+  }
+  tick();
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+  new MutationObserver(applyTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+})();
+</script>
