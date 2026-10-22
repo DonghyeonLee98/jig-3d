@@ -35,11 +35,11 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-body); f
 h1 { font-size: 19px; font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
 .sub { color: var(--muted); font-size: 12.5px; margin: 2px 0 0; }
 .label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
-.seg { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { font: inherit; font-size: 12.5px; padding: 7px 4px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
 .seg button { border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
-.seg button:nth-child(3n+1) { border-left: 0; }
-.seg button:nth-child(-n+3) { border-top: 0; }
+.seg button:nth-child(4n+1) { border-left: 0; }
+.seg button:nth-child(-n+4) { border-top: 0; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
 .row { display: flex; align-items: center; gap: 10px; }
 input[type=range] { flex: 1; accent-color: var(--accent); }
@@ -82,7 +82,7 @@ a { color: var(--accent); }
   <aside class="rail">
     <div>
       <h1>DIY 측정 지그 3D</h1>
-      <p class="sub">2026-10-22 · 실제 STEP과 같은 형상 (mm) · 탠덤 시료 치수는 가정 · 탠덤 v2는 SMA 다리 간섭 2곳이 있어 v3에서 고침 · PL 캐리어 FFC는 30 mm만 그림</p>
+      <p class="sub">2026-10-22 · 뒷줄 탠덤 v2→v3→v4, 앞줄 싱글 v1(자석·힌지)→v2와 PL 캐리어 · 실제 STEP과 같은 형상 (mm) · 탠덤 시료 치수는 가정 · v2는 SMA 다리 간섭 2곳(v3부터 고침)</p>
     </div>
 
     <div>
@@ -91,8 +91,10 @@ a { color: var(--accent); }
         <button id="v-all" aria-pressed="true">전체</button>
         <button id="v-tandem" aria-pressed="false">탠덤 v2</button>
         <button id="v-tandem3" aria-pressed="false">탠덤 v3</button>
-        <button id="v-single_magnet" aria-pressed="false">싱글 자석</button>
-        <button id="v-single_hinge" aria-pressed="false">싱글 힌지</button>
+        <button id="v-tandem4" aria-pressed="false">탠덤 v4</button>
+        <button id="v-single_magnet" aria-pressed="false">싱글 v1 자석</button>
+        <button id="v-single_hinge" aria-pressed="false">싱글 v1 힌지</button>
+        <button id="v-single2" aria-pressed="false">싱글 v2</button>
         <button id="v-carrier" aria-pressed="false">PL 캐리어</button>
       </div>
     </div>
@@ -129,13 +131,15 @@ a { color: var(--accent); }
         <li><span>SMA–BNC 1 m <span class="pn">Amphenol 245101-04-M1.00</span> · <a href="https://www.digikey.kr/ko/products/detail/amphenol-rf/245101-04-M1-00/4865244" target="_blank" rel="noopener">링크</a></span><span class="q">×4</span></li>
         <li><span>빔라인용 3 m <span class="pn">245101-04-M3.00</span></span><span class="q">×4</span></li>
         <li><span>BNC→바나나 <span class="pn">Pomona 1269</span> · <a href="https://www.digikey.kr/ko/products/detail/pomona-electronics/1269/603922" target="_blank" rel="noopener">링크</a></span><span class="q">×2</span></li>
-        <li><span>DB9 연장 1.5 m <span class="pn">L-com CSMN9MF-5</span> · <a href="https://www.digikey.kr/ko/products/detail/l-com/CSMN9MF-5/21288542" target="_blank" rel="noopener">링크</a></span><span class="q">×1</span></li>
+        <li><span>DB9 연장 1.5 m (v1) <span class="pn">L-com CSMN9MF-5</span> · <a href="https://www.digikey.kr/ko/products/detail/l-com/CSMN9MF-5/21288542" target="_blank" rel="noopener">링크</a></span><span class="q">×1</span></li>
         <li><span>스위치 박스 또는 MPPT-HOLD4 보드</span><span class="q">×1</span></li>
+        <li><span>DB15 연장 (싱글 v2) <span class="pn">품번 미정</span></span><span class="q">×1</span></li>
         <li><span>FFC 8핀 152 mm <span class="pn">Molex 0150200083</span> · <a href="https://www.digikey.kr/ko/products/detail/molex/0150200083/2817728" target="_blank" rel="noopener">링크</a></span><span class="q">캐리어용</span></li>
         <li><span>FFC → DB9 중계 기판</span><span class="q">×1</span></li>
+        <li><span>스테이션 판 <span class="pn">Al 60×60×5 + 강구 Ø5 ×3 + 자석 2</span></span><span class="q">장비마다</span></li>
         <li><span>진공 튜브 <span class="pn">SMC TU0425</span> · <a href="https://kr.misumi-ec.com/vona2/detail/221006395592/" target="_blank" rel="noopener">링크</a></span><span class="q">1롤</span></li>
       </ul>
-      <p class="sub" style="margin-top:10px">모든 지그가 같은 접속(소자당 SMA 4개 + 화소 DB9 + M2.5 장착 구멍)이라, PL 장비·빔라인용 지그를 새로 만들어도 ①은 그대로 씁니다.</p>
+      <p class="sub" style="margin-top:10px">탠덤은 소자당 SMA 4개, 싱글은 커넥터 하나(v1 DB9, v2 DB15)로 나가고, v2·v4는 바닥이 같은 키네마틱 자리(스테이션 판)에 앉습니다. 그래서 PL 장비·빔라인용 지그를 새로 만들어도 ①은 그대로 씁니다.</p>
     </div>
   </aside>
 </div>
@@ -147,14 +151,16 @@ a { color: var(--accent); }
 <script>
 (function () {
   const JIGS = [
-    { key: 'tandem', file: 'tandem_jig_261022.glb', x: -172, title: '탠덤 v2 (10.7 mm)' },
-    { key: 'tandem3', file: 'tandem3_jig_261022.glb', x: -86, title: '탠덤 v3 노브 (14.7 mm)' },
-    { key: 'single_magnet', file: 'single_magnet_jig_261022.glb', x: 0, title: '싱글 · 자석 (10.5 mm)' },
-    { key: 'single_hinge', file: 'single_hinge_jig_261022.glb', x: 86, title: '싱글 · 힌지 (10.5 mm)' },
-    { key: 'carrier', file: 'carrier_jig_261022.glb', x: 172, title: 'PL 캐리어 (2.0 mm)' },
+    { key: 'tandem', x: -88, y: 58, title: '탠덤 v2 (10.7 mm)' },
+    { key: 'tandem3', x: 0, y: 58, title: '탠덤 v3 노브 (14.7 mm)' },
+    { key: 'tandem4', x: 88, y: 58, title: '탠덤 v4 (키네마틱)' },
+    { key: 'single_magnet', x: -132, y: -66, title: '싱글 v1 자석' },
+    { key: 'single_hinge', x: -44, y: -66, title: '싱글 v1 힌지' },
+    { key: 'single2', x: 44, y: -66, title: '싱글 v2 핀 12·DB15' },
+    { key: 'carrier', x: 132, y: -66, title: 'PL 캐리어 (2.0 mm)' },
   ];
   // layer of each part (from the CAD build), used for the exploded view
-  const LAYERS = {"tandem": [["bottom PCB (FR4 1.6, rear window d18, rear pins F-/S-)", 0], ["rear pin Mill-Max 0906-1 (-7.5,-7.5)", 0], ["rear pin Mill-Max 0906-1 (-7.5,+7.5)", 0], ["rear pin Mill-Max 0906-1 (+7.5,-7.5)", 0], ["rear pin Mill-Max 0906-1 (+7.5,+7.5)", 0], ["lower frame (3D print: ledge, keyed pocket, vacuum ring)", 1], ["vacuum barb M5 (optional)", 1], ["ASSUMED sample: Si wafer 25x25x0.25", 2], ["ASSUMED sample: active area 1 cm2", 2], ["ASSUMED sample: Ag grid and dot pads", 2], ["corner posts (3D print, 4)", 3], ["top PCB, spider (FR4 1.6, front pins F+/S+)", 4], ["front pin Mill-Max 0906-1 (-7.5,-7.5)", 4], ["front pin Mill-Max 0906-1 (-7.5,+7.5)", 4], ["front pin Mill-Max 0906-1 (+7.5,-7.5)", 4], ["front pin Mill-Max 0906-1 (+7.5,+7.5)", 4], ["SMA edge jack F+ (top PCB)", 4], ["SMA edge jack S+ (top PCB)", 4], ["SMA edge jack F- (bottom PCB)", 0], ["SMA edge jack S- (bottom PCB)", 0], ["M2.5 screw + nut 1", 5], ["M2.5 screw + nut 2", 5], ["M2.5 screw + nut 3", 5], ["M2.5 screw + nut 4", 5], ["dowel pin d2 1", 5], ["dowel pin d2 2", 5]], "single_magnet": [["bottom PCB (FR4 1.6, 8 pins up, 16 mm film-side window, DB9)", 0], ["pin Mill-Max 0906-1 P1 (-9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P2 (-9.6,-2.8)", 0], ["pin Mill-Max 0906-1 P4 (+9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P3 (+9.6,-2.8)", 0], ["pin Mill-Max 0906-1 ITO_a (-4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_b (+4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_c (-4.4,-10.0)", 0], ["pin Mill-Max 0906-1 ITO_d (+4.4,-10.0)", 0], ["DB9 (4 pixels separately + ITO force/sense)", 0], ["lower frame (3D print, glass edge ledge)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["pocket frame (3D print, 25.2 pocket + corner reliefs, magnets)", 3], ["edge shim 1.2 mm (1.1T ITO; remove for 2.2T FTO)", 4], ["magnetic lid (POM / 3D print, bevelled window 19 -> 25 mm)", 5], ["magnet d6x2 N45 1 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 1 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 2 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 2 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 3 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 3 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 4 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 4 (lid, Supermagnete S-06-02-N)", 5], ["M2.5 screw 1 (from below, into heat-set insert)", 0], ["M2.5 screw 2 (from below, into heat-set insert)", 0], ["M2.5 screw 3 (from below, into heat-set insert)", 0], ["M2.5 screw 4 (from below, into heat-set insert)", 0], ["dowel pin d2 1", 6], ["dowel pin d2 2", 6]], "single_hinge": [["bottom PCB (FR4 1.6, 8 pins up, 16 mm film-side window, DB9)", 0], ["pin Mill-Max 0906-1 P1 (-9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P2 (-9.6,-2.8)", 0], ["pin Mill-Max 0906-1 P4 (+9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P3 (+9.6,-2.8)", 0], ["pin Mill-Max 0906-1 ITO_a (-4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_b (+4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_c (-4.4,-10.0)", 0], ["pin Mill-Max 0906-1 ITO_d (+4.4,-10.0)", 0], ["DB9 (4 pixels separately + ITO force/sense)", 0], ["lower frame (3D print, glass edge ledge)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["pocket frame (3D print, 25.2 pocket + corner reliefs, hinge knuckles + latch magnets)", 3], ["edge shim 1.2 mm (1.1T ITO; remove for 2.2T FTO)", 4], ["hinged lid (POM / 3D print, bevelled window 19 -> 25 mm, opens to -x)", 5], ["magnet d6x2 N45 1 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 1 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 2 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 2 (lid, Supermagnete S-06-02-N)", 5], ["hinge pin d2.5 x 30 (MISUMI MS2.5-30)", 5], ["M2.5 screw 1 (from below, into heat-set insert)", 0], ["M2.5 screw 2 (from below, into heat-set insert)", 0], ["M2.5 screw 3 (from below, into heat-set insert)", 0], ["M2.5 screw 4 (from below, into heat-set insert)", 0]], "carrier": [["carrier PCB (FR4 0.8 mm ENIG, 10 mm window, pads at the jig-pin xy)", 0], ["carrier pads (ENIG, 4 pixels + 4 ITO)", 0], ["silver epoxy dots (room-temperature cure, 8)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["FFC connector Hirose FH12-8S-0.5SH(55) (8 pos, 0.5 mm, bottom contact)", 0], ["FFC Molex 0150200083 (8 pos, 0.5 mm, 152 mm; drawn 30 mm)", 0], ["breakout PCB (FR4 1.6, FFC -> DB9 female, same pin-out as the single jig)", 0], ["FFC connector on the breakout (FH12-8S-0.5SH(55))", 0], ["DB9 female NorComp 182-009-213R171 (breakout)", 0]], "tandem3": [["base plate (Al 6061 black anodised 4.0, flat bottom, cone rear window, blind M3 taps)", 0], ["bottom PCB (FR4 1.6, rear window d18, rear pins F-/S-)", 1], ["rear pin Mill-Max 0906-1 (-7.5,-7.5)", 1], ["rear pin Mill-Max 0906-1 (-7.5,+7.5)", 1], ["rear pin Mill-Max 0906-1 (+7.5,-7.5)", 1], ["rear pin Mill-Max 0906-1 (+7.5,+7.5)", 1], ["lower frame + corner posts (one part, POM: ledge, keyed pocket, vacuum ring, spring pockets)", 2], ["vacuum barb M5 (optional)", 2], ["ASSUMED sample: Si wafer 25x25x0.25", 3], ["ASSUMED sample: active area 1 cm2", 3], ["ASSUMED sample: Ag grid and dot pads", 3], ["fixing screw M3 x 10 1 (lab stock)", 0], ["fixing screw M3 x 10 2 (lab stock)", 0], ["lift spring OD4.5 x 6 free 1", 4], ["lift spring OD4.5 x 6 free 2", 4], ["top PCB, spider (FR4 1.6, front pins F+/S+; lifts on the springs)", 5], ["front pin Mill-Max 0906-1 (-7.5,-7.5)", 5], ["front pin Mill-Max 0906-1 (-7.5,+7.5)", 5], ["front pin Mill-Max 0906-1 (+7.5,-7.5)", 5], ["front pin Mill-Max 0906-1 (+7.5,+7.5)", 5], ["SMA edge jack F+ (top PCB)", 5], ["SMA edge jack S+ (top PCB)", 5], ["SMA edge jack F- (bottom PCB)", 1], ["SMA edge jack S- (bottom PCB)", 1], ["knob 1: M3 x 14 knurled thumb screw (head d10)", 6], ["knob 2: M3 x 14 knurled thumb screw (head d10)", 6], ["dowel pin d2 x 15 1 (guides the spider)", 5], ["dowel pin d2 x 15 2 (guides the spider)", 5]]};
+  const LAYERS = {"tandem": [["bottom PCB (FR4 1.6, rear window d18, rear pins F-/S-)", 0], ["rear pin Mill-Max 0906-1 (-7.5,-7.5)", 0], ["rear pin Mill-Max 0906-1 (-7.5,+7.5)", 0], ["rear pin Mill-Max 0906-1 (+7.5,-7.5)", 0], ["rear pin Mill-Max 0906-1 (+7.5,+7.5)", 0], ["lower frame (3D print: ledge, keyed pocket, vacuum ring)", 1], ["vacuum barb M5 (optional)", 1], ["ASSUMED sample: Si wafer 25x25x0.25", 2], ["ASSUMED sample: active area 1 cm2", 2], ["ASSUMED sample: Ag grid and dot pads", 2], ["corner posts (3D print, 4)", 3], ["top PCB, spider (FR4 1.6, front pins F+/S+)", 4], ["front pin Mill-Max 0906-1 (-7.5,-7.5)", 4], ["front pin Mill-Max 0906-1 (-7.5,+7.5)", 4], ["front pin Mill-Max 0906-1 (+7.5,-7.5)", 4], ["front pin Mill-Max 0906-1 (+7.5,+7.5)", 4], ["SMA edge jack F+ (top PCB)", 4], ["SMA edge jack S+ (top PCB)", 4], ["SMA edge jack F- (bottom PCB)", 0], ["SMA edge jack S- (bottom PCB)", 0], ["M2.5 screw + nut 1", 5], ["M2.5 screw + nut 2", 5], ["M2.5 screw + nut 3", 5], ["M2.5 screw + nut 4", 5], ["dowel pin d2 1", 5], ["dowel pin d2 2", 5]], "tandem4": [["base plate v4 (Al 6061 black anodised 4.0, flat, kinematic V-grooves + 2 magnets, rear-photodiode window)", 0], ["bottom PCB (FR4 1.6, rear window d18, rear pins F-/S-)", 1], ["rear pin Mill-Max 0906-1 (-7.5,-7.5)", 1], ["rear pin Mill-Max 0906-1 (-7.5,+7.5)", 1], ["rear pin Mill-Max 0906-1 (+7.5,-7.5)", 1], ["rear pin Mill-Max 0906-1 (+7.5,+7.5)", 1], ["lower frame + corner posts (one part, POM: ledge, keyed pocket, vacuum ring, spring pockets)", 2], ["vacuum barb M5 (optional)", 2], ["ASSUMED sample: Si wafer 25x25x0.25", 3], ["ASSUMED sample: active area 1 cm2", 3], ["ASSUMED sample: Ag grid and dot pads", 3], ["fixing screw MISUMI SCB3-10 1 (M3 x 10 A2-70)", 4], ["fixing screw MISUMI SCB3-10 2 (M3 x 10 A2-70)", 4], ["lift spring MISUMI UL5-10 1 (OD5, free 10)", 4], ["lift spring MISUMI UL5-10 2 (OD5, free 10)", 4], ["top PCB, spider (FR4 1.6, front pins F+/S+; lifts on the springs)", 5], ["front pin Mill-Max 0906-1 (-7.5,-7.5)", 5], ["front pin Mill-Max 0906-1 (-7.5,+7.5)", 5], ["front pin Mill-Max 0906-1 (+7.5,-7.5)", 5], ["front pin Mill-Max 0906-1 (+7.5,+7.5)", 5], ["SMA edge jack F+ (top PCB)", 5], ["SMA edge jack S+ (top PCB)", 5], ["SMA edge jack F- (bottom PCB)", 1], ["SMA edge jack S- (bottom PCB)", 1], ["knob 1: MISUMI NOOSF3-14 (M3 x 14, d12 x 2.5)", 6], ["knob 2: MISUMI NOOSF3-14 (M3 x 14, d12 x 2.5)", 6], ["dowel pin MISUMI MS2-15 1 (guides the spider)", 2], ["dowel pin MISUMI MS2-15 2 (guides the spider)", 2], ["station plate (per instrument: Al 60x60x5, d28 hole, M6 on 50 mm; PL stage / beamline / J-V bench)", -1], ["kinematic ball 1 (MISUMI precision ball SUS440C d5, glued in its seat)", -1], ["kinematic ball 2 (MISUMI precision ball SUS440C d5, glued in its seat)", -1], ["kinematic ball 3 (MISUMI precision ball SUS440C d5, glued in its seat)", -1], ["kinematic magnet 1 (MISUMI HXNN6-2, station side)", -1], ["kinematic magnet 1 (MISUMI HXNN6-2, jig side)", 0], ["kinematic magnet 2 (MISUMI HXNN6-2, station side)", -1], ["kinematic magnet 2 (MISUMI HXNN6-2, jig side)", 0], ["rear plug (removable, Al black: dark rear + thermal path; drops in from the top on a 0.6 mm collar)", 2], ["silicone thermal pad 0.5 mm on the plug (insulating, touches the wafer rear)", 2], ["NTC bead in the plug top (wafer-rear temperature)", 2], ["NTC Murata NCP18XH103F03RB on the bottom PCB (beside the rear window)", 1], ["photodiode Vishay VBPW34S, front light (tab top, faces up)", 1], ["photodiode Vishay VBPW34S, rear light (under the tab, faces down through the base window)", 1], ["aux FFC connector Hirose FH12-8S-0.5SH(55) (NTC x2, photodiodes x2, ID)", 1], ["1-Wire ID DS28E05 (SOT-23)", 1]], "single_magnet": [["bottom PCB (FR4 1.6, 8 pins up, 16 mm film-side window, DB9)", 0], ["pin Mill-Max 0906-1 P1 (-9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P2 (-9.6,-2.8)", 0], ["pin Mill-Max 0906-1 P4 (+9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P3 (+9.6,-2.8)", 0], ["pin Mill-Max 0906-1 ITO_a (-4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_b (+4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_c (-4.4,-10.0)", 0], ["pin Mill-Max 0906-1 ITO_d (+4.4,-10.0)", 0], ["DB9 (4 pixels separately + ITO force/sense)", 0], ["lower frame (3D print, glass edge ledge)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["pocket frame (3D print, 25.2 pocket + corner reliefs, magnets)", 3], ["edge shim 1.2 mm (1.1T ITO; remove for 2.2T FTO)", 4], ["magnetic lid (POM / 3D print, bevelled window 19 -> 25 mm)", 5], ["magnet d6x2 N45 1 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 1 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 2 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 2 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 3 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 3 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 4 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 4 (lid, Supermagnete S-06-02-N)", 5], ["M2.5 screw 1 (from below, into heat-set insert)", 0], ["M2.5 screw 2 (from below, into heat-set insert)", 0], ["M2.5 screw 3 (from below, into heat-set insert)", 0], ["M2.5 screw 4 (from below, into heat-set insert)", 0], ["dowel pin d2 1", 6], ["dowel pin d2 2", 6]], "single_hinge": [["bottom PCB (FR4 1.6, 8 pins up, 16 mm film-side window, DB9)", 0], ["pin Mill-Max 0906-1 P1 (-9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P2 (-9.6,-2.8)", 0], ["pin Mill-Max 0906-1 P4 (+9.6,+2.8)", 0], ["pin Mill-Max 0906-1 P3 (+9.6,-2.8)", 0], ["pin Mill-Max 0906-1 ITO_a (-4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_b (+4.4,+10.0)", 0], ["pin Mill-Max 0906-1 ITO_c (-4.4,-10.0)", 0], ["pin Mill-Max 0906-1 ITO_d (+4.4,-10.0)", 0], ["DB9 (4 pixels separately + ITO force/sense)", 0], ["lower frame (3D print, glass edge ledge)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["pocket frame (3D print, 25.2 pocket + corner reliefs, hinge knuckles + latch magnets)", 3], ["edge shim 1.2 mm (1.1T ITO; remove for 2.2T FTO)", 4], ["hinged lid (POM / 3D print, bevelled window 19 -> 25 mm, opens to -x)", 5], ["magnet d6x2 N45 1 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 1 (lid, Supermagnete S-06-02-N)", 5], ["magnet d6x2 N45 2 (frame, Supermagnete S-06-02-N)", 3], ["magnet d6x2 N45 2 (lid, Supermagnete S-06-02-N)", 5], ["hinge pin d2.5 x 30 (MISUMI MS2.5-30)", 5], ["M2.5 screw 1 (from below, into heat-set insert)", 0], ["M2.5 screw 2 (from below, into heat-set insert)", 0], ["M2.5 screw 3 (from below, into heat-set insert)", 0], ["M2.5 screw 4 (from below, into heat-set insert)", 0]], "single2": [["base plate v2 (Al 6061 black anodised 4.0, flat, kinematic V-grooves + 2 magnets, bevelled film-side window)", 0], ["station plate (per instrument: Al 60x60x5, d28 hole, M6 on 50 mm; PL stage / beamline / J-V bench)", -1], ["kinematic ball 1 (MISUMI precision ball SUS440C d5, glued in its seat)", -1], ["kinematic ball 2 (MISUMI precision ball SUS440C d5, glued in its seat)", -1], ["kinematic ball 3 (MISUMI precision ball SUS440C d5, glued in its seat)", -1], ["kinematic magnet 1 (MISUMI HXNN6-2, station side)", -1], ["kinematic magnet 1 (MISUMI HXNN6-2, jig side)", 0], ["kinematic magnet 2 (MISUMI HXNN6-2, station side)", -1], ["kinematic magnet 2 (MISUMI HXNN6-2, jig side)", 0], ["bottom PCB v2 (FR4 1.6 ENIG, 12 pins, 16 mm film-side window, DB15, NTC, ID, photodiode)", 1], ["pin Mill-Max 0906-1 P1F (-10.7,+2.0)", 1], ["pin Mill-Max 0906-1 P1S (-8.4,+3.5)", 1], ["pin Mill-Max 0906-1 P2F (-10.7,-2.0)", 1], ["pin Mill-Max 0906-1 P2S (-8.4,-3.5)", 1], ["pin Mill-Max 0906-1 P4F (+10.7,+2.0)", 1], ["pin Mill-Max 0906-1 P4S (+8.4,+3.5)", 1], ["pin Mill-Max 0906-1 P3F (+10.7,-2.0)", 1], ["pin Mill-Max 0906-1 P3S (+8.4,-3.5)", 1], ["pin Mill-Max 0906-1 ITO_aF (-4.4,+10.0)", 1], ["pin Mill-Max 0906-1 ITO_bF (+4.4,+10.0)", 1], ["pin Mill-Max 0906-1 ITO_cS (-4.4,-10.0)", 1], ["pin Mill-Max 0906-1 ITO_dS (+4.4,-10.0)", 1], ["DB15 female right-angle NorComp 182-015-213R171 (8 pixel F/S + ITO F/S + NTC + PD + ID)", 1], ["NTC Murata NCP18XH103F03RB (10 k, 0603) under the film", 1], ["1-Wire ID DS28E05 (SOT-23) - logs know which jig", 1], ["photodiode Vishay VBPW34S (light monitor, faces up)", 1], ["dowel pin MISUMI MS2-6 1 (PCB -> frame)", 2], ["dowel pin MISUMI MS2-6 2 (PCB -> frame)", 2], ["frame v2 (POM: 0.8 mm edge ledge = hard stop, glass pocket, nut pockets, hinge knuckles, catch magnets)", 2], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 3], ["sample: ITO band (x 4.8-20.5 mm)", 3], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 3], ["aperture mask (stainless 0.1 mm, laser-cut like an SMT stencil; 4 x 2.5 mm + a blank dark mask)", 4], ["press ring for 1.1T glass (1.1 mm: POM + 0.2 mm silicone; none for 2.2T)", 4], ["hinged lid v2 (Al 6061 black anodised 2.5, bevelled window 19 -> 23 mm, magnetic catch on +x)", 5], ["hinge pin MISUMI MS2.5-30 (d2.5 x 30)", 5], ["catch magnet 1 (frame, MISUMI HXNN6-2)", 2], ["catch magnet 1 (lid, MISUMI HXNN6-2)", 5], ["catch magnet 2 (frame, MISUMI HXNN6-2)", 2], ["catch magnet 2 (lid, MISUMI HXNN6-2)", 5], ["bolt MISUMI SCB3-8 1 (from below) + nut SLBNR3", 0], ["bolt MISUMI SCB3-8 2 (from below) + nut SLBNR3", 0], ["bolt MISUMI SCB3-8 3 (from below) + nut SLBNR3", 0], ["bolt MISUMI SCB3-8 4 (from below) + nut SLBNR3", 0]], "carrier": [["carrier PCB (FR4 0.8 mm ENIG, 10 mm window, pads at the jig-pin xy)", 0], ["carrier pads (ENIG, 4 pixels + 4 ITO)", 0], ["silver epoxy dots (room-temperature cure, 8)", 1], ["sample: ITO glass 25x25x1.1 (film down, lab mask pattern)", 2], ["sample: ITO band (x 4.8-20.5 mm)", 2], ["sample: Ag stripes (4 pixels) + Ag/ITO pads", 2], ["FFC connector Hirose FH12-8S-0.5SH(55) (8 pos, 0.5 mm, bottom contact)", 0], ["FFC Molex 0150200083 (8 pos, 0.5 mm, 152 mm; drawn 30 mm)", 0], ["breakout PCB (FR4 1.6, FFC -> DB9 female, same pin-out as the single jig)", 0], ["FFC connector on the breakout (FH12-8S-0.5SH(55))", 0], ["DB9 female NorComp 182-009-213R171 (breakout)", 0]], "tandem3": [["base plate (Al 6061 black anodised 4.0, flat bottom, cone rear window, blind M3 taps)", 0], ["bottom PCB (FR4 1.6, rear window d18, rear pins F-/S-)", 1], ["rear pin Mill-Max 0906-1 (-7.5,-7.5)", 1], ["rear pin Mill-Max 0906-1 (-7.5,+7.5)", 1], ["rear pin Mill-Max 0906-1 (+7.5,-7.5)", 1], ["rear pin Mill-Max 0906-1 (+7.5,+7.5)", 1], ["lower frame + corner posts (one part, POM: ledge, keyed pocket, vacuum ring, spring pockets)", 2], ["vacuum barb M5 (optional)", 2], ["ASSUMED sample: Si wafer 25x25x0.25", 3], ["ASSUMED sample: active area 1 cm2", 3], ["ASSUMED sample: Ag grid and dot pads", 3], ["fixing screw MISUMI SCB3-10 1 (M3 x 10 A2-70)", 0], ["fixing screw MISUMI SCB3-10 2 (M3 x 10 A2-70)", 0], ["lift spring MISUMI UL5-10 1 (OD5, free 10)", 4], ["lift spring MISUMI UL5-10 2 (OD5, free 10)", 4], ["top PCB, spider (FR4 1.6, front pins F+/S+; lifts on the springs)", 5], ["front pin Mill-Max 0906-1 (-7.5,-7.5)", 5], ["front pin Mill-Max 0906-1 (-7.5,+7.5)", 5], ["front pin Mill-Max 0906-1 (+7.5,-7.5)", 5], ["front pin Mill-Max 0906-1 (+7.5,+7.5)", 5], ["SMA edge jack F+ (top PCB)", 5], ["SMA edge jack S+ (top PCB)", 5], ["SMA edge jack F- (bottom PCB)", 1], ["SMA edge jack S- (bottom PCB)", 1], ["knob 1: MISUMI NOOSF3-14 (M3 x 14, d12 x 2.5)", 6], ["knob 2: MISUMI NOOSF3-14 (M3 x 14, d12 x 2.5)", 6], ["dowel pin MISUMI MS2-15 1 (guides the spider)", 5], ["dowel pin MISUMI MS2-15 2 (guides the spider)", 5]]};
 
   const DK = 'https://www.digikey.kr/ko/products/detail/';
   const MI = 'https://kr.misumi-ec.com/vona2/detail/';
@@ -162,24 +168,43 @@ a { color: var(--accent); }
   function describe(n) {
     const S = (cat, buy, url, note) => ({ cat, buy, url, note });
     if (/sample/i.test(n)) return S('sample', /ASSUMED/.test(n) ? 'KIER 탠덤 시료 (치수 가정, 실측 후 수정)' : '우리 마스크 패턴 싱글셀 (new_mask_0919)', null, '시료');
+    if (/^dowel pin MISUMI MS2-6/.test(n)) return S('stock', 'MISUMI MS2-6 (Ø2 × 6, SUJ2)', MI + '110100140620/', 'PCB → 프레임 위치 맞춤, 지그당 2개');
+    if (/^hinged lid v2/.test(n)) return S('make', 'Al 6061 흑색 아노다이징 2.5 mm 뚜껑 (CNC)', 'https://jlccnc.com/', '경사 창 19 → 23 mm, +x 쪽 자석 걸쇠 · 단단해서 모서리까지 고르게 누름');
+    if (/^carrier PCB/.test(n)) return S('make', 'JLCPCB 2층 FR4 0.8 mm, ENIG', 'https://jlcpcb.com/', '패드 xy = 지그 핀 xy, 화소 아래 10 mm 창, FFC 출구');
+    if (/^NTC bead/.test(n)) return S('stock', 'NTC 10 kΩ 비드형 (리드선, 품번 미정)', null, '뒷면 플러그 윗면에 묻음: 웨이퍼 뒷면 온도');
+    if (/^station plate/.test(n)) return S('reuse', '스테이션 판 (Al 60×60×5, Ø28 구멍, M6 50 mm 간격)', null, '장비마다 1개 (PL 스테이지·빔라인·J–V): 어느 지그든 같은 자리에 앉는다');
+    if (/^kinematic ball/.test(n)) return S('reuse', '미스미 정밀 볼 SUS440C Ø5', MI + '221000622915/', '스테이션 판에 3개 붙임 (지그 바닥 V홈에 맞물림)');
+    if (/^kinematic magnet.*station side/.test(n)) return S('reuse', 'MISUMI HXNN6-2 (Ø6×2 N52) 스테이션 쪽', MI + '110300262960/?HissuCode=HXNN6-2', '스테이션 판마다 2개');
+    if (/^kinematic magnet/.test(n)) return S('stock', 'MISUMI HXNN6-2 (Ø6×2 N52) 지그 쪽', MI + '110300262960/?HissuCode=HXNN6-2', '지그 바닥마다 2개');
+    if (/^catch magnet/.test(n)) return S('stock', 'MISUMI HXNN6-2 (Ø6×2 N52) 뚜껑 걸쇠', MI + '110300262960/?HissuCode=HXNN6-2', '싱글 v2: 프레임·뚜껑 2쌍, 접촉 힘 13 N (핀 약 5 N)');
+    if (/^DB15/.test(n)) return S('stock', 'NorComp 182-015-213R171 DB15 암 직각 (금)', DK + 'norcomp-inc/182-015-213R171/858355', '1–8 화소 F/S · 9 ITO F+ · 10 ITO S+ · 11 NTC · 12 PD · 13 ID · 14 GND · 15 차폐 · ₩3,847');
+    if (/^NTC/.test(n)) return S('stock', 'NTC 10 kΩ (Murata NCP18XH103F03RB)', DK + 'murata-electronics/NCP18XH103F03RB/1644665', '온도 기록 (막 근처 공기·PCB 온도, 소자 온도와 차이 있음) · ₩254');
+    if (/1-Wire ID/.test(n)) return S('stock', 'DS28E05 1-Wire ID 칩', DK + 'analog-devices-inc-maxim-integrated/DS28E05R-T/3975551', '기록에 어느 지그였는지 남는다 · ₩2,424');
+    if (/^photodiode/.test(n)) return S('stock', 'Vishay VBPW34S 포토다이오드 (조도 감시)', 'https://www.digikey.kr/ko/products/result?keywords=VBPW34S', '빛 세기 변화 기록 · ₩1,719');
+    if (/^aperture mask/.test(n)) return S('make', '0.1 mm 스테인리스 마스크 (4 × 2.5 mm, 어두운 막 따로)', 'https://jlcpcb.com/', 'SMT 스텐실처럼 레이저 가공 (공차·가격 견적 확인)');
+    if (/^press ring/.test(n)) return S('make', '누름 링 (POM + 실리콘 0.2 mm)', 'https://jlccnc.com/', '1.1T용; 2.2T는 링 없이');
+    if (/^frame v2/.test(n)) return S('make', 'POM 프레임 v2 (0.8 mm 턱 = 하드 스톱)', 'https://jlccnc.com/', '유리 위치는 포켓에서, 핀 자리와 겹치지 않음');
+    if (/^rear plug/.test(n)) return S('make', '뒷면 플러그 (Al, 흑색 아노다이징)', 'https://jlccnc.com/', '탠덤 v4: 끼우면 어두운 뒷면·뒷면 온도, 빼면 양면 창');
+    if (/^silicone thermal pad/.test(n)) return S('stock', '실리콘 열패드 0.5 mm (절연)', null, '뒷면 플러그 위, 웨이퍼 뒷면에 닿음');
+    if (/^bolt MISUMI SCB3-8/.test(n)) return S('stock', 'MISUMI SCB3-8 + SLBNR3 (M3, A2-70)', MI + '110300239250/', '아래에서 끼우고 너트는 프레임 위 (뚜껑 아래)');
     if (/^breakout PCB|\(breakout\)|on the breakout/.test(n)) return S('reuse', 'FFC → DB9 중계 기판 (FR4 1.6, 32×22) + NorComp DB9 암', DK + 'norcomp-inc/182-009-213R171/858347', '캐리어 여러 개가 같이 쓴다. 싱글 지그와 같은 핀 배정');
     if (/^FFC Molex/.test(n)) return S('reuse', 'Molex 0150200083 FFC (8핀 0.5 mm, 152 mm)', DK + 'molex/0150200083/2817728', '캐리어에서 뽑아 다른 캐리어에 꽂는다 · ₩9,893');
-    if (/^FFC connector/.test(n)) return S('stock', 'Hirose FH12-8S-0.5SH(55) FFC 커넥터', DK + 'hirose-electric-co-ltd/FH12-8S-0-5SH-55/4283372', '캐리어마다 1개 · ₩2,424');
+    if (/FFC connector/.test(n)) return S('stock', 'Hirose FH12-8S-0.5SH(55) FFC 커넥터', DK + 'hirose-electric-co-ltd/FH12-8S-0-5SH-55/4283372', '캐리어마다 1개 · ₩2,424');
     if (/^silver epoxy/.test(n)) return S('stock', '상온 경화 2액 은 에폭시', null, '캐리어마다 점 8개 · 더미 기판으로 먼저 시험 · 연구실 보유품 확인');
     if (/^carrier pads/.test(n)) return S('make', '캐리어 패드 (ENIG, 지그 핀과 같은 xy)', 'https://jlcpcb.com/quote', '캐리어 PCB의 일부');
     if (/^base plate/.test(n)) return S('make', '받침판 알루미늄 6061 흑색 아노다이징 4 mm (CNC)', 'https://jlccnc.com/', '탠덤 v3 · 아랫면 평평, M3 탭');
     if (/^(lower frame|pocket frame|corner posts|magnetic lid|hinged lid|edge shim)/.test(n))
       return S('make', '시제품 레진 (JLC3DP) → 본제작 검정 POM CNC (JLCCNC)', 'https://jlccnc.com/', '지그마다 STEP으로 견적');
     if (/PCB/.test(n) && !/^(SMA|pin|rear pin|front pin)/.test(n)) return S('make', 'JLCPCB 2층 FR4 1.6 mm, ENIG + 검정 마스크', 'https://jlcpcb.com/quote', '$20.90/디자인, 5장 단위 (여분으로 같은 지그를 더 만든다)');
-    if (/^knob/.test(n)) return S('stock', 'M3 × 14 널링 손나사 (머리 Ø10)', null, '탠덤 v3 · 위에서 뚜껑 조임·높이 조절 · 품번 미정');
-    if (/^lift spring/.test(n)) return S('stock', '압축 스프링 OD4.5 × 6 mm', null, '탠덤 v3 · 노브를 풀면 스파이더 PCB를 들어 올림 · 품번 미정');
-    if (/^fixing screw M3/.test(n)) return S('stock', 'M3 × 10 나사 (연구실 재고)', null, '탠덤 v3 받침판 고정');
+    if (/^knob/.test(n)) return S('stock', 'MISUMI NOOSF3-14 노브 (M3 × 14, Ø12 × 2.5)', 'https://kr.misumi-ec.com/vona2/result/?Keyword=' + 'NOOSF3-14', '탠덤 v3·v4: 위에서 뚜껑 조임·높이 조절 · 6,834원');
+    if (/^lift spring/.test(n)) return S('stock', 'MISUMI UL5-10 압축 스프링 (OD5, 자유 길이 10)', 'https://kr.misumi-ec.com/vona2/result/?Keyword=' + 'UL5-10', '노브를 풀면 스파이더 PCB를 들어 올림 · 370원');
+    if (/^fixing screw/.test(n)) return S('stock', 'MISUMI SCB3-10 (M3 × 10, A2-70)', MI + '110300239250/', '탠덤 v3·v4 받침판 고정 · 378원');
     if (/Mill-Max/.test(n)) return S('stock', 'Mill-Max 0906-1-15-20-75-14-11-0', DK + 'mill-max-manufacturing-corp/0906-1-15-20-75-14-11-0/1147049', '지그당 8개 · 100개 구비 권장 (개당 878원)');
     if (/^SMA/.test(n)) return S('stock', 'Amphenol RF 132322 (1.6 mm 기판용)', DK + 'amphenol-rf/132322/2181040', '지그당 4개 · 10개 구비 (개당 12,567원)');
     if (/^DB9/.test(n)) return S('stock', 'NorComp 182-009-213R171 (금 플래시)', DK + 'norcomp-inc/182-009-213R171/858347', '지그당 1개 · 10개 구비 (개당 2,782원)');
-    if (/^magnet d6/.test(n)) return S('stock', 'Supermagnete S-06-02-N (Ø6×2, N45)', 'https://www.supermagnete.de/eng/disc-magnets-neodymium/disc-magnet-6mm-2mm_S-06-02-N', '지그당 4–8개 · 40개 구비 (€0.26/개)');
+    if (/^magnet d6/.test(n)) return S('stock', 'MISUMI HXNN6-2 (Ø6×2, N52)', MI + '110300262960/?HissuCode=HXNN6-2', '구매는 국내 미스미 (10/22 결정) · 20개부터 3,668원 · 60 ℃ 이하');
     if (/hinge pin/.test(n)) return S('stock', 'MISUMI MS2.5-30 (Ø2.5 × 30)', MI + '110100140620/', '힌지 지그당 1개 · 5개 구비');
-    if (/dowel/.test(n)) return S('stock', /x 15/.test(n) ? 'MISUMI MS2-15 (Ø2 × 15, SUJ2)' : 'MISUMI MS2-10 (Ø2, SUJ2)', MI + '110100140620/', '지그당 2개 · 20개 구비');
+    if (/dowel/.test(n)) return S('stock', /MS2-15|x 15/.test(n) ? 'MISUMI MS2-15 (Ø2 × 15, SUJ2)' : (/MS2-6/.test(n) ? 'MISUMI MS2-6 (Ø2 × 6, SUJ2)' : 'MISUMI MS2-10 (Ø2, SUJ2)'), MI + '110100140620/', '지그당 2개');
     if (/vacuum barb/.test(n)) return S('stock', 'SMC M-5AU-4 (M5 → Ø4 튜브)', MI + '221006291531/', '선택 · 3개 구비');
     if (/screw/.test(n)) return S('stock', 'MISUMI SCB2.5-8 + ruthex M2.5 인서트', MI + '110300239250/', '지그당 4–8개 · 나사 50개, 인서트 70개 1팩');
     return S('stock', n, null, '');
@@ -201,9 +226,9 @@ a { color: var(--accent); }
   const fill = new THREE.DirectionalLight(0xffffff, 0.35); fill.position.set(160, 80, -120); scene.add(fill);
 
   // bench: a plate with a 10 mm grid
-  const bench = new THREE.Mesh(new THREE.PlaneGeometry(470, 230), new THREE.MeshStandardMaterial({ color: 0xcfd5cf, roughness: 0.95 }));
-  bench.rotation.x = -Math.PI / 2; bench.position.y = -6.2; scene.add(bench);
-  const grid = new THREE.GridHelper(470, 47, 0x9aa49c, 0xb7bfb8); grid.position.y = -6.15; grid.scale.z = 230 / 470; scene.add(grid);
+  const bench = new THREE.Mesh(new THREE.PlaneGeometry(480, 300), new THREE.MeshStandardMaterial({ color: 0xcfd5cf, roughness: 0.95 }));
+  bench.rotation.x = -Math.PI / 2; bench.position.y = -12.2; scene.add(bench);
+  const grid = new THREE.GridHelper(480, 48, 0x9aa49c, 0xb7bfb8); grid.position.y = -12.15; grid.scale.z = 300 / 480; scene.add(grid);
 
   const world = new THREE.Group(); world.rotation.x = -Math.PI / 2; scene.add(world);   // CAD z-up -> three y-up
   const meshes = []; const jigGroups = {}; const beams = [];
@@ -224,7 +249,7 @@ a { color: var(--accent); }
     const buf = b64 ? Uint8Array.from(atob(b64), (ch) => ch.charCodeAt(0)).buffer : null;
     if (!buf) { document.getElementById('status').textContent = '모델 파일을 불러오지 못했습니다. 새로 고침해 보세요.'; return; }
     loader.parse(buf, '', (gltf) => {
-      const g = new THREE.Group(); g.position.x = j.x; g.add(gltf.scene); world.add(g); jigGroups[j.key] = g;
+      const g = new THREE.Group(); g.position.x = j.x; g.position.y = j.y || 0; g.add(gltf.scene); world.add(g); jigGroups[j.key] = g;
       const layer = Object.fromEntries(LAYERS[j.key]);
       // GLTFLoader sanitises node names (spaces -> _, drops [ ] . : /) and may add _1; map them back to the CAD names
       const san = (s) => s.replace(/\s/g, '_').replace(/[\[\]\.:\/]/g, '');
@@ -265,24 +290,40 @@ a { color: var(--accent); }
   const labels = JIGS.map((j) => { const el = document.createElement('div'); el.className = 'tagl'; el.textContent = j.title; labelBox.appendChild(el); return { j, el }; });
 
   // view selection
-  let view = 'all';
+  let view = 'all', goal = null, animId = 0;
+  // the exploded stack is taller: raise the look-at point and step back with it
+  const maxL = {}; for (const k in LAYERS) maxL[k] = Math.max(1, ...LAYERS[k].map((e) => e[1]));
+  const lift = (key, t) => 4.5 * (key === 'all' ? 7 : (maxL[key] || 6)) * t;
+  const grow = (key, t) => 1 + (key === 'all' ? 0.2 : 0.45) * t;
+  // explode only the jig in view (all of them in the overview)
+  function applyExplode() { const t = document.getElementById('explode').value / 100;
+    for (const m of meshes) m.position.z = m.userData.z0 + (view === 'all' || m.userData.jig === view ? m.userData.layer * 9 * t : 0); }
   function frame(key, instant) {
-    view = key;
+    view = key; applyExplode();
     document.querySelectorAll('.seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.id === 'v-' + key)));
-    const target = new THREE.Vector3(key === 'all' ? 0 : JIGS.find((j) => j.key === key).x, 4, key === 'carrier' ? -30 : 0);
-    const dist = (key === 'all' ? 300 : (key === 'carrier' ? 130 : 105)) * Math.max(1, (key === 'all' ? 2.0 : 1.1) / camera.aspect);
+    const t = document.getElementById('explode').value / 100;
+    const jj = JIGS.find((j) => j.key === key) || { x: 0, y: 0 };
+    const target = new THREE.Vector3(key === 'all' ? 0 : jj.x, 4 + lift(key, t), key === 'all' ? 0 : -(jj.y + (key === 'carrier' ? 30 : 0)));
+    const dist = grow(key, t) * (key === 'all' ? 330 : (key === 'carrier' ? 130 : 110)) * Math.max(1, (key === 'all' ? 1.7 : 1.1) / camera.aspect);
     const pos = target.clone().add(new THREE.Vector3(dist * 0.55, dist * 0.62, dist * 0.78));
-    if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) { camera.position.copy(pos); controls.target.copy(target); return; }
+    const id = ++animId;
+    if (instant || matchMedia('(prefers-reduced-motion: reduce)').matches) { goal = null; camera.position.copy(pos); controls.target.copy(target); return; }
     const p0 = camera.position.clone(), t0 = controls.target.clone(), start = performance.now();
-    (function step(now) { const k = Math.min(1, (now - start) / 600), e = k * k * (3 - 2 * k);
-      camera.position.lerpVectors(p0, pos, e); controls.target.lerpVectors(t0, target, e); if (k < 1) requestAnimationFrame(step); })(start);
+    goal = { pos, target };
+    (function step(now) { if (id !== animId) return; const k = Math.min(1, (now - start) / 600), e = k * k * (3 - 2 * k);
+      camera.position.lerpVectors(p0, goal.pos, e); controls.target.lerpVectors(t0, goal.target, e); if (k < 1) requestAnimationFrame(step); else goal = null; })(start);
   }
   JIGS.concat([{ key: 'all' }]).forEach((j) => document.getElementById('v-' + j.key).addEventListener('click', () => frame(j.key)));
 
   // explode
   const ex = document.getElementById('explode'), exv = document.getElementById('exv');
+  let tPrev = 0;
   ex.addEventListener('input', () => { const t = ex.value / 100; exv.textContent = ex.value + ' %';
-    for (const m of meshes) m.position.z = m.userData.z0 + m.userData.layer * 9 * t; });
+    applyExplode();
+    const f = grow(view, t) / grow(view, tPrev), dy = lift(view, t) - lift(view, tPrev);
+    for (const [P, T] of goal ? [[goal.pos, goal.target], [camera.position, controls.target]] : [[camera.position, controls.target]]) {
+      const off = P.clone().sub(T).multiplyScalar(f); T.y += dy; P.copy(T).add(off); }
+    tPrev = t; });
 
   // toggles
   function toggle(id, fn) { const b = document.getElementById(id); b.addEventListener('click', () => { const on = b.getAttribute('aria-pressed') !== 'true'; b.setAttribute('aria-pressed', String(on)); fn(on); }); }
@@ -326,7 +367,7 @@ a { color: var(--accent); }
     for (const { j, el } of labels) {
       const show = loaded === JIGS.length && (view === 'all' || view === j.key);
       el.hidden = !show; if (!show) continue;
-      v.set(j.x, 22, 0).project(camera);
+      v.set(j.x, 26, -(j.y || 0)).project(camera);
       el.style.left = ((v.x + 1) / 2 * r.width) + 'px'; el.style.top = ((1 - v.y) / 2 * r.height) + 'px';
     }
     requestAnimationFrame(tick);
