@@ -1,0 +1,154 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>측정 연습 3D</title>
+<meta name="description" content="싱글셀·탠덤 지그로 셀 넣기부터 J–V까지 연습. 실수하면 곡선이 실제처럼 바뀐다 (one-diode 계산, 예시 값).">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f3f5f2; --panel: #ffffff; --fg: #18211c; --muted: #5d6a62; --line: #d9dfd9;
+  --accent: #1f6b45; --make: #3b6db3; --warn: #b4531a; --ok: #2f9e6a; --stage: #e9ede8; --ref: #9aa3ae;
+  --font-body: "IBM Plex Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101513; --panel: #171e1b; --fg: #e4ebe6; --muted: #9aa8a0; --line: #2a3530;
+  --accent: #4fb582; --make: #6f9be0; --warn: #e48a4f; --ok: #5cc392; --stage: #141b18; --ref: #6b747e; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #101513; --panel: #171e1b; --fg: #e4ebe6; --muted: #9aa8a0; --line: #2a3530;
+  --accent: #4fb582; --make: #6f9be0; --warn: #e48a4f; --ok: #5cc392; --stage: #141b18; --ref: #6b747e; color-scheme: dark }
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 14px; line-height: 1.5; }
+.app { display: flex; height: 100%; }
+.stage { position: relative; flex: 1 1 auto; min-width: 0; background: var(--stage); }
+#c { display: block; width: 100%; height: 100%; touch-action: none; }
+.rail { flex: 0 0 380px; overflow-y: auto; background: var(--panel); border-left: 1px solid var(--line);
+  padding-block: 16px 28px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 16px; }
+.rail > * { flex-shrink: 0; }   /* the rail scrolls; its blocks must keep their height */
+h1 { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+h2 { font-size: 15px; margin: 0 0 4px; font-weight: 700; }
+.sub { color: var(--muted); font-size: 12.5px; margin: 2px 0 0; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+a { color: var(--accent); }
+.label { font-size: 11px; font-weight: 600; letter-spacing: .08em; color: var(--muted); margin: 0 0 6px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; padding: 8px 4px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.steps button { font: inherit; font-size: 12px; line-height: 1.3; padding: 6px 4px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--fg); cursor: pointer; text-align: left; min-height: 44px; }
+.steps button b { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+.steps button.done b::after { content: " ✓"; color: var(--ok); }
+.steps button[aria-current="step"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.card { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 10px; }
+.card p { margin: 0; font-size: 13px; }
+.opts { display: flex; flex-wrap: wrap; gap: 8px; }
+.opt { font: inherit; font-size: 13px; padding: 8px 12px; min-height: 40px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--fg); cursor: pointer; text-align: left; }
+.opt[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); font-weight: 600; background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.btn { font: inherit; font-size: 13.5px; font-weight: 600; padding: 9px 14px; min-height: 42px; border-radius: 8px; border: 1px solid var(--accent); background: var(--accent); color: #fff; cursor: pointer; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: .45; cursor: default; }
+.nav { display: flex; gap: 8px; justify-content: space-between; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+.field { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
+.field input, .field select { font: inherit; font-size: 14px; color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; min-height: 38px; width: 100%; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+.knob { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; }
+.knob .btn { min-width: 52px; padding: 6px 8px; }
+.meter { height: 8px; border-radius: 4px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); }
+.mono { font-family: var(--font-mono); font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.note { font-size: 12px; color: var(--muted); }
+button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.chart svg { width: 100%; height: auto; display: block; }
+.chart text { fill: var(--muted); font-size: 10px; font-family: var(--font-mono); }
+.legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 16px; height: 0; border-top: 2px solid currentColor; vertical-align: middle; margin-right: 5px; }
+.legend .rev { color: var(--accent); } .legend .fwd { color: var(--make); } .legend .fwd::before { border-top-style: dashed; }
+.legend .ref { color: var(--ref); } .legend .ref::before { border-top-style: dotted; }
+table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 4px 4px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--muted); font-size: 11.5px; }
+.msgs { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 13px; }
+.msgs.ok li::marker { color: var(--ok); } .msgs.bad li::marker { color: var(--warn); }
+details { font-size: 12.5px; color: var(--muted); }
+details summary { cursor: pointer; font-weight: 600; color: var(--fg); }
+details ul { padding-left: 18px; margin: 6px 0 0; display: grid; gap: 4px; }
+.hint { position: absolute; left: max(12px, env(safe-area-inset-left, 0px)); bottom: 12px; right: 12px; font-size: 12px; color: var(--muted); pointer-events: none; }
+.hint span { background: color-mix(in srgb, var(--panel) 85%, transparent); padding: 4px 9px; border-radius: 6px; }
+.tagl { position: absolute; transform: translate(-50%, -100%); font-size: 11.5px; font-weight: 600; color: var(--fg); background: color-mix(in srgb, var(--panel) 88%, transparent); border: 1px solid var(--line); padding: 1px 7px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+.status { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 13px; pointer-events: none; }
+.toast { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; max-width: calc(100% - 24px); pointer-events: none; }
+@media (max-width: 760px) {
+  .app { flex-direction: column; height: auto; }
+  .stage { flex: none; height: 42svh; min-height: 280px; position: sticky; top: 0; z-index: 2; }
+  .rail { flex: none; border-left: 0; border-top: 1px solid var(--line); overflow: visible; }
+}
+</style>
+
+<div class="app">
+  <div class="stage">
+    <canvas id="c" aria-label="측정 연습 3D 장면"></canvas>
+    <div id="labels"></div>
+    <div class="status" id="status">지그 모델을 불러오는 중…</div>
+    <div class="toast" id="toast" hidden></div>
+    <div class="hint"><span id="hint">끌어서 회전 · 두 손가락으로 확대 · 노브·뚜껑·로터리를 눌러도 됩니다</span></div>
+  </div>
+
+  <aside class="rail">
+    <div>
+      <div class="top"><h1>측정 연습</h1><a href="./" class="note">← 지그 3D</a></div>
+      <p class="sub">셀 넣기부터 J–V까지. 곡선은 그린 것이 아니라 계산한 것이라(one-diode + 접촉·배선), 실수하면 실험실에서처럼 바뀝니다. 숫자는 <b>예시 값</b>입니다.</p>
+    </div>
+    <div>
+      <p class="label">시료</p>
+      <div class="seg" role="group" aria-label="시료 선택">
+        <button id="tr-single" aria-pressed="true">싱글셀 (WBG, 화소)</button>
+        <button id="tr-tandem" aria-pressed="false">탠덤 (KIER 1 cm²)</button>
+      </div>
+    </div>
+    <div>
+      <p class="label">단계</p>
+      <div class="steps" id="steps"></div>
+    </div>
+    <div class="card" id="card" aria-live="polite"></div>
+    <div class="nav">
+      <button class="btn ghost" id="prev">← 이전</button>
+      <button class="btn ghost" id="fill" title="모든 단계를 바르게 채웁니다">바르게 채우기</button>
+      <button class="btn" id="next">다음 →</button>
+    </div>
+    <div id="result" hidden>
+      <p class="label">J–V 결과</p>
+      <div class="chart" id="chart"></div>
+      <div class="legend"><span class="rev">역방향 (Voc→Jsc)</span><span class="fwd">순방향</span><span class="ref">예시 기준</span></div>
+      <table id="tbl"></table>
+      <p class="label" style="margin-top:12px">무엇 때문에</p>
+      <ul class="msgs" id="msgs"></ul>
+    </div>
+    <details>
+      <summary>계산 방법과 가정</summary>
+      <ul>
+        <li>셀: one-diode 식 I = Iph − I0(e<sup>Vd/nkT</sup> − 1) − Vd/Rsh, V = Vd − I·Rs − (접촉·배선 손실). 점마다 Vd를 이분법으로 풉니다. 예시 값(역방향)에 맞게 Iph·I0·Rs를 처음에 맞춥니다: 싱글 Voc 1.20 V, Jsc 20.0 mA/cm², FF 0.80 (n 1.5) · 탠덤 Voc 1.90 V, Jsc 19.5 mA/cm², FF 0.78 (한 다이오드로 근사, n 2.4).</li>
+        <li>싱글 화소: 다이오드는 화소 전체(Ag 줄 × ITO 띠 6.7 × 3.5 mm = 0.2345 cm²), 빛은 마스크 구멍 0.0625 cm²만. 마스크를 빼면 빛 면적이 3.75배.</li>
+        <li>핀 접촉: 핀당 0.02 Ω + 얇은 막 항(힘이 약하면 지수로 커짐, <b>가정</b>, 실측 전). 핀 힘은 첫 닿음 0.098 N + 0.35 N/mm, 노브 한 바퀴 0.5 mm, 멈춤 1.8바퀴(설계 문서 값).</li>
+        <li>4선: 선·핀 저항의 전압을 선당 1 V까지 키슬리가 메꾼다고 보았습니다(2400 사양서 값, 확인 필요). 센스 선이 빠지면 그쪽은 2선처럼 계산(<b>가정</b>, 기종에 따라 출력이 튈 수 있어 실제로는 하지 말 것).</li>
+        <li>히스테리시스(<b>가정</b>): 순방향에서 I0·Rs가 커지고, 지연이 길수록 줄어듭니다. 이온 이동 모델이 아닙니다.</li>
+        <li>그 밖의 가정: 지그가 홈에 덜 앉으면 빛 −3 %, 탠덤 마스크 돌아감 = 핀당 +30 Ω와 가림 8 %, 마스크 없음 +5 %, 웨이퍼 뒤집힘 = PVK에 빛 2 %. 계측 잡음 1 nA + 0.002 %.</li>
+        <li>지그 형상은 제작판 STEP(싱글 v2, 탠덤 v4 십자 창)과 같고, 키슬리·스위치 박스·램프·PC는 상자로만 그렸습니다. 탠덤 윗판 높이는 3배로 과장해 보입니다.</li>
+      </ul>
+    </details>
+    <p class="note" id="selftest"></p>
+  </aside>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script src="jig_models.js"></script>
+<script src="measure.js"></script>
