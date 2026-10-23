@@ -32,6 +32,7 @@ body { background: var(--bg); color: var(--fg); font-family: var(--font-body); f
 .rail { flex: 0 0 340px; overflow-y: auto; background: var(--panel); border-left: 1px solid var(--line);
   padding-block: 18px 28px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   display: flex; flex-direction: column; gap: 18px; }
+.rail > * { flex-shrink: 0; }   /* the rail scrolls; its blocks must not shrink, or long part notes spill over the next block */
 h1 { font-size: 19px; font-weight: 700; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
 .sub { color: var(--muted); font-size: 12.5px; margin: 2px 0 0; }
 .label { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
