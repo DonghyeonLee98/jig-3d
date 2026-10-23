@@ -41,17 +41,18 @@
     base: 'base plate, production (POM black 4.0: also under the DB15 tab, 3 balls glued half-deep, 2 magnets, nuts for the DB15 block)',
     balls: [1, 2, 3].map((i) => `kinematic ball ${i} (Tsubaki SBM-SUJ-5, SUJ2 d5, glued half-deep into the jig bottom)`),
     kmag: [1, 2].map((i) => `kinematic magnet ${i} (MISUMI HXNN6-2, jig side)`),
-    pcb: 'bottom PCB S, production (FR4 1.6 ENIG black, 12 pins, 13 x 16 film-side window, DB15 tab 56 mm, NTC, ID, photodiode; Gerber pcb/S)',
+    pcb: 'bottom PCB S, production (FR4 1.6 ENIG black, 12 pins, 13 x 16 film-side window, DB15 tab 56 mm, TMP117 + SHT45 (I2C) + photodiode placed by JLC; KiCad pcb_kicad/S)',
     pin: { P1F: PM + 'P1F (-10.7,+2.0)', P1S: PM + 'P1S (-8.4,+3.5)', P2F: PM + 'P2F (-10.7,-2.0)', P2S: PM + 'P2S (-8.4,-3.5)',
       P3F: PM + 'P3F (+10.7,-2.0)', P3S: PM + 'P3S (+8.4,-3.5)', P4F: PM + 'P4F (+10.7,+2.0)', P4S: PM + 'P4S (+8.4,+3.5)',
       ITO_aF: PM + 'ITO_aF (-4.4,+10.0)', ITO_bF: PM + 'ITO_bF (+4.4,+10.0)', ITO_cS: PM + 'ITO_cS (-4.4,-10.0)', ITO_dS: PM + 'ITO_dS (+4.4,-10.0)' },
-    db15: 'DB15 female right-angle NorComp 182-015-213R171 (8 pixel F/S + ITO F/S + NTC + PD + ID)',
+    db15: 'DB15 female right-angle NorComp 182-015-213R171 (8 pixel F/S + ITO F/S + I2C SDA/SCL/3V3 + PD)',
     block: 'DB15 block, production (POM black: flange behind a 1.45 mm front panel, 2 x 4-40 jackscrews Keystone 7229, 2 x SCB3-20 into nuts in the base)',
     jack: ['jackscrew 4-40 Keystone 7229 (left, panel -> DB15 flange)', 'jackscrew 4-40 Keystone 7229 (right, panel -> DB15 flange)'],
     bbolt: [1, 2].map((i) => `DB15 block bolt MISUMI SCB3-20 ${i} + nut SLBNR3 in the base|bolt`),
     bnut: [1, 2].map((i) => `DB15 block bolt MISUMI SCB3-20 ${i} + nut SLBNR3 in the base|nut`),
-    ntc: 'NTC Murata NCP18XH103F03RB (10 k, 0603) under the film',
-    id: '1-Wire ID DS2431P+ (TSOC-6) - logs know which jig',
+    tmp: 'temperature TI TMP117AIDRVR (±0.1 °C, I2C 0x49, unique ID; WSON-6 2x2) under the film',
+    sht: 'humidity + temperature Sensirion SHT45-AD1F (±1 %RH, I2C 0x44, PTFE filter; DFN-4 1.5x1.5) on the tab',
+    rc: '100 nF 0603 + 4.7 k SDA/SCL pull-ups 0603 (JLC basic parts)',
     pd: 'photodiode Vishay VBPW34S (light monitor, faces up)',
     dowel: [1, 2].map((i) => `dowel pin MISUMI MS2-6 ${i} (PCB -> frame)`),
     frame: 'frame v2 (POM: 0.8 mm edge ledge = hard stop, glass pocket, nut pockets, hinge knuckles, catch magnets)',
@@ -72,7 +73,7 @@
     base: 'base plate v4, production (POM black 4.0: 3 balls glued half-deep, 2 magnets, M3 nuts under the PCB for the knobs and screws, rear-photodiode window)',
     balls: [1, 2, 3].map((i) => `kinematic ball ${i} (Tsubaki SBM-SUJ-5, SUJ2 d5, glued half-deep into the jig bottom)`),
     kmag: [1, 2].map((i) => `kinematic magnet ${i} (MISUMI HXNN6-2, jig side)`),
-    tb: 'bottom PCB TB, production (FR4 1.6 ENIG black, rear pins F-/S- at ±6.45, window d15, SMA F-/S-, NTC, front/rear PD, ID, FFC; KiCad pcb_kicad/TB)',
+    tb: 'bottom PCB TB, production (FR4 1.6 ENIG black, rear pins F-/S- at ±6.45, window d15, SMA F-/S-, TMP117 + SHT45 + front PD + FFC placed by JLC, rear PD by hand; KiCad pcb_kicad/TB)',
     rpin: xy(PR),
     frame: 'lower frame + corner posts (one part, POM, production: wafer-pocket corner reliefs, NTC pocket, ledge, keyed pocket, vacuum ring, spring pockets)',
     fix: [1, 2].map((i) => `fixing screw MISUMI SCB3-10 ${i} (M3 x 10 A2-70)`),
@@ -88,11 +89,12 @@
     plug: 'rear plug (removable, Al black: dark rear + thermal path; drops in from the top, four 0.6 mm ears rest on the bottom PCB along x / y)',
     pad: 'silicone thermal pad 0.5 mm on the plug (insulating, touches the wafer rear)',
     bead: 'NTC bead TDK B57861S0103F040 in the plug top (wafer-rear temperature; leads down the d1.2 hole)',
-    ntc: 'NTC Murata NCP18XH103F03RB on the bottom PCB (beside the rear window)',
+    tmp: 'temperature TI TMP117AIDRVR on the bottom PCB (±0.1 °C, I2C 0x49, unique ID; beside the rear window)',
+    sht: 'humidity + temperature Sensirion SHT45-AD1F (±1 %RH, I2C 0x44, PTFE filter) on the tab',
+    rc: '100 nF 0603 x2 + 4.7 k SDA/SCL pull-ups 0603 (JLC basic parts)',
     pdF: 'photodiode Vishay VBPW34S, front light (tab top, faces up)',
     pdR: 'photodiode Vishay VBPW34S, rear light (under the tab, faces down through the base window)',
-    ffc: 'aux FFC connector Hirose FH12-8S-0.5SH(55) (NTC x2, photodiodes x2, ID)',
-    id: '1-Wire ID DS2431P+ (TSOC-6)',
+    ffc: 'aux FFC connector Hirose FH12-8S-0.5SH(55) (I2C TMP117 + SHT45, plug NTC, photodiodes x2)',
   };
 
   // ============================================================ steps: 제작 싱글
@@ -110,7 +112,7 @@
         { label: 'DB15 블록 S5 · POM', qty: '1', parts: [S.block] },
         { label: 'DB15 암 NorComp 182-015-213R171', qty: '1', parts: [S.db15] },
         { label: '스프링 핀 Mill-Max 0906-1', qty: '12', parts: SPIN },
-        { label: 'ID 칩 DS2431P+ · NTC NCP18XH103F03RB · PD VBPW34S', qty: '1 · 1 · 1', parts: [S.id, S.ntc, S.pd] },
+        { label: 'PCB에 JLC가 단 것: TMP117 · SHT45 · PD · 100 nF · 4.7 k', qty: '달려 옴', parts: [S.tmp, S.sht, S.pd, S.rc] },
         { label: '강구 SBM-SUJ-5 (Ø5 SUJ2)', qty: '3', parts: S.balls },
         { label: '자석 HXNN6-2 (Ø6 × 2, N52)', qty: '6', parts: [...S.kmag, ...S.cmagF, ...S.cmagL] },
         { label: '맞춤핀 MS2-6 · 경첩 핀 MS2.5-30', qty: '2 · 1', parts: [...S.dowel, S.hinge] },
@@ -121,12 +123,14 @@
         { label: '더미 기판 D (마지막 점검)', qty: '1', parts: [S.dummy] },
         { label: '2액 에폭시 · 플럭스 · 솔더 윅 · 확대경', qty: '—', parts: [] }] }] },
 
-    { id: 's-smd', phase: 'PCB 납땜', title: '① SMD 먼저', focus: 'S', view: 'top', tool: 'iron', enter: [['bench', 'S']],
-      say: '작은 부품부터 윗면에 납땜한다: ID 칩 U1 DS2431P+ (TSOC-6), NTC RT1 (0603, 막 바로 밑 0, −9.6), 포토다이오드 D1 VBPW34S.',
-      tip: '끝나면 확대경으로 다리 단락을 본다.',
-      tasks: [{ t: 'pick', items: [
-        { label: 'U1 ID 칩 DS2431P+', parts: [S.id] }, { label: 'RT1 NTC 0603', parts: [S.ntc] }, { label: 'D1 포토다이오드', parts: [S.pd] }],
-        decoys: [{ label: 'DB15 암', like: [S.db15], hint: '큰 부품은 나중이다. 작은 SMD부터 해야 인두가 닿는다.' }] }] },
+    { id: 's-in', phase: 'PCB 납땜', title: '① 받은 PCB 보기 (JLC가 단 SMD)', focus: 'S', view: 'top', tool: null, enter: [['bench', 'S']],
+      say: 'SMD는 JLC가 달아서 온다(ENIG, 조립 옵션 B). 확대경으로 하나씩 본다: 있는지, 핀 1 점이 실크 점과 맞는지, 다리 사이 브리지가 없는지.',
+      tip: '손으로 다는 것은 핀 12개·DB15뿐이다. TMP117에 공장 고유 번호가 있어 ID 칩은 없다.',
+      tasks: [{ t: 'inspect', items: [
+        { label: 'U1 TMP117 (0, −10.6), 막 바로 밑', part: S.tmp, read: '있음 · 핀 1 맞음 · 브리지 없음' },
+        { label: 'U2 SHT45 (−8, −27), 탭', part: S.sht, read: '있음 · 핀 1 맞음 · 필터 막 그대로' },
+        { label: 'D1 포토다이오드 VBPW34S', part: S.pd, read: '있음 · 방향 맞음' },
+        { label: 'C1·C2 100 nF · R1·R2 4.7 k', part: S.rc, read: '있음 · 브리지 없음' }] }] },
 
     { id: 's-pins', phase: 'PCB 납땜', title: '② 스프링 핀 12개, 플랜지 위', focus: 'S', view: 'iso', tool: 'iron',
       say: 'Mill-Max 0906-1을 윗면(플랜지 쪽)에서 끼우고 아랫면에서 납땜한다. 끝이 위로 서야 아래를 보는 막에 닿는다. 판에 수직으로.',
@@ -140,8 +144,8 @@
         decoys: [{ label: 'DB15 블록 S5', like: [S.block], hint: 'POM 블록과 잭나사는 지그 조립 때, 납땜 뒤에 위에서 얹는다.' }] }] },
 
     { id: 's-dmm', phase: '점검', title: '멀티미터: DB15 ↔ 핀', focus: 'S', view: 'top', tool: 'meter',
-      say: 'DB15 핀 ↔ 스프링 핀이 0.5 Ω 아래인지 본다. 빛나는 핀을 누르거나 버튼으로. 이웃 핀끼리, GND(14)와는 열려 있어야 한다.',
-      tip: 'DB15: 1–8 = P1F·P1S·P2F·P2S·P3F·P3S·P4F·P4S, 9 ITO F, 10 ITO S, 11 NTC, 12 PD, 13 ID, 14 GND, 15 차폐.',
+      say: 'DB15 핀 ↔ 스프링 핀이 0.5 Ω 아래인지 본다. 빛나는 핀을 누르거나 버튼으로. 이웃 핀끼리, GND(14)와는 열려 있어야 한다. 그다음 I2C 선.',
+      tip: 'DB15: 1–8 = P1F·P1S·P2F·P2S·P3F·P3S·P4F·P4S, 9 ITO F, 10 ITO S, 11 SDA, 12 PD, 13 SCL, 14 GND, 15 3V3 (차폐는 껍데기로만).',
       tasks: [{ t: 'probe', ref: S.db15, items: [
         { label: '1 ↔ P1F', part: S.pin.P1F, read: '< 0.5 Ω' }, { label: '2 ↔ P1S', part: S.pin.P1S, read: '< 0.5 Ω' },
         { label: '3 ↔ P2F', part: S.pin.P2F, read: '< 0.5 Ω' }, { label: '4 ↔ P2S', part: S.pin.P2S, read: '< 0.5 Ω' },
@@ -150,7 +154,9 @@
         { label: '9 ↔ ITO a', part: S.pin.ITO_aF, read: '< 0.5 Ω' }, { label: '9 ↔ ITO b', part: S.pin.ITO_bF, read: '< 0.5 Ω' },
         { label: '10 ↔ ITO c', part: S.pin.ITO_cS, read: '< 0.5 Ω' }, { label: '10 ↔ ITO d', part: S.pin.ITO_dS, read: '< 0.5 Ω' },
         { label: '1 ↔ 2 이웃', part: S.db15, read: '열림' }, { label: '1 ↔ 14 GND', part: S.db15, read: '열림' },
-        { label: '11 ↔ 14 NTC', part: S.ntc, read: '≈ 10 kΩ (25 °C)' }, { label: '12 PD, 빛 켜고', part: S.pd, read: '빛에 비례하는 전류' }] }] },
+        { label: '15 ↔ 14 3V3–GND', part: S.tmp, read: '0 Ω 아님 (IC를 거친 큰 값은 괜찮음)' },
+        { label: '11 ↔ 15 SDA–3V3', part: S.rc, read: '≈ 4.7 kΩ (풀업)' }, { label: '13 ↔ 15 SCL–3V3', part: S.rc, read: '≈ 4.7 kΩ (풀업)' },
+        { label: '11 ↔ 13 SDA–SCL', part: S.sht, read: '단락 없음' }, { label: '12 PD, 빛 켜고', part: S.pd, read: '빛에 비례하는 전류' }] }] },
 
     { id: 's-balls', phase: '받침', title: '받침 아랫면: 강구 3개', focus: 'jig', view: 'below', tool: 'epoxy', enter: [['place', [S.base]]],
       say: '받침 S1을 뒤집어 강구 SBM-SUJ-5 3개를 자리(Ø5.05, 깊이 2.5)에 2액 에폭시로 붙인다. 반쯤 묻혀 2.5 mm 나오고, 책상에서 세 점으로 선다.',
@@ -236,7 +242,8 @@
         { label: '1 ↔ 9 화소 1', part: S.db15, read: '≈ 1 kΩ + 접촉' }, { label: '3 ↔ 9 화소 2', part: S.db15, read: '≈ 1 kΩ + 접촉' },
         { label: '5 ↔ 9 화소 3', part: S.db15, read: '≈ 1 kΩ + 접촉' }, { label: '7 ↔ 9 화소 4', part: S.db15, read: '≈ 1 kΩ + 접촉' },
         { label: '1 ↔ 2 같은 화소 F–S', part: S.db15, read: '≈ 0 Ω' }, { label: '9 ↔ 10 ITO F–S', part: S.db15, read: '≈ 0 Ω' },
-        { label: '1 ↔ 3 화소 1–2', part: S.db15, read: '≈ 2 kΩ (ITO를 거쳐)' }] }] },
+        { label: '1 ↔ 3 화소 1–2', part: S.db15, read: '≈ 2 kΩ (ITO를 거쳐)' },
+        { label: 'I2C 스캔 (Pico, DB15 11·13)', part: S.db15, read: '0x49 TMP117 · 0x44 SHT45 찾음' }] }] },
   ];
 
   // ============================================================ steps: 제작 탠덤
@@ -249,8 +256,8 @@
         { label: '아랫판 TB · 윗판 TT (십자 창)', qty: '1 · 1', parts: [T.tb, T.tt] },
         { label: '스프링 핀 Mill-Max 0906-1', qty: '8', parts: [...Object.values(T.rpin), ...Object.values(T.fpin)] },
         { label: 'SMA 엣지 잭 Samtec SMA-J-P-H-ST-EM1', qty: '4', parts: [T.smaFp, T.smaSp, T.smaFm, T.smaSm] },
-        { label: 'FFC FH12-8S · ID DS2431P+ · NTC 0603', qty: '1 · 1 · 1', parts: [T.ffc, T.id, T.ntc] },
-        { label: '포토다이오드 VBPW34S (앞빛·뒷빛)', qty: '2', parts: [T.pdF, T.pdR] },
+        { label: 'TB에 JLC가 단 것: TMP117 · SHT45 · 앞빛 PD · FFC J3 · 100 nF · 4.7 k', qty: '달려 옴', parts: [T.tmp, T.sht, T.pdF, T.ffc, T.rc] },
+        { label: '뒷빛 포토다이오드 VBPW34S (손 납땜)', qty: '1', parts: [T.pdR] },
         { label: '강구 SBM-SUJ-5 · 자석 HXNN6-2', qty: '3 · 2', parts: [...T.balls, ...T.kmag] },
         { label: '너트 SLBNR3', qty: '4', parts: T.nut },
         { label: '맞춤핀 MS2-15 · 고정 나사 SCB3-10', qty: '2 · 2', parts: [...T.dowel, ...T.fix] },
@@ -258,24 +265,31 @@
         { label: '(선택) 뒷면 플러그 T3 · 열패드 0.5 mm · NTC 비드 B57861S', qty: '1 · 1 · 1', parts: [T.plug, T.pad, T.bead] },
         { label: '2액 에폭시 · 플럭스 · 솔더 윅 · 확대경', qty: '—', parts: [] }] }] },
 
-    { id: 't-tb-smd', phase: 'TB 납땜', title: '① SMD 먼저', focus: 'TB', view: 'top', tool: 'iron', enter: [['bench', 'TB']],
-      say: '아랫판 TB 윗면에 ID 칩 U1 (7, −25), NTC RT1 (11.5, 0), 앞빛 PD D1, FFC J3 (FH12 8핀 0.5 mm). 뒷빛 PD D2만 아랫면이다(받침 창으로 아래를 봄).',
+    { id: 't-tb-in', phase: 'TB 납땜', title: '① 받은 TB 보기 (JLC가 단 SMD)', focus: 'TB', view: 'top', tool: null, enter: [['bench', 'TB']],
+      say: 'TB 윗면 SMD는 JLC가 달아서 온다. 확대경으로 본다: 있는지, 핀 1 점, 브리지. 특히 FFC J3 (0.5 mm 간격).',
       tasks: [
-        { t: 'pick', items: [
-          { label: 'U1 ID 칩', parts: [T.id] }, { label: 'RT1 NTC', parts: [T.ntc] }, { label: 'D1 앞빛 PD (윗면)', parts: [T.pdF] },
-          { label: 'D2 뒷빛 PD (아랫면)', parts: [T.pdR], from: 'bottom' }, { label: 'J3 FFC 8핀', parts: [T.ffc] }],
-          decoys: [{ label: 'SMA 잭', like: [T.smaFm], hint: '큰 부품은 나중이다. SMD부터.' }] },
-        { t: 'quiz', q: 'J3 다리(0.5 mm 간격) 사이에 땜납이 붙었다.', opts: [
+        { t: 'inspect', items: [
+          { label: 'U1 TMP117 (11.5, 0), 뒷창 옆', part: T.tmp, read: '있음 · 핀 1 맞음 · 브리지 없음' },
+          { label: 'U2 SHT45 (5.2, −23.6), 탭', part: T.sht, read: '있음 · 핀 1 맞음 · 필터 막 그대로' },
+          { label: 'D1 앞빛 포토다이오드', part: T.pdF, read: '있음 · 방향 맞음' },
+          { label: 'J3 FFC FH12 8핀', part: T.ffc, read: '있음 · 다리 사이 확인' },
+          { label: 'C1·C2 100 nF · R5·R6 4.7 k', part: T.rc, read: '있음 · 브리지 없음' }] },
+        { t: 'quiz', q: 'J3 다리(0.5 mm 간격) 사이에 땜납이 붙어 있다.', opts: [
           { t: '플럭스를 바르고 솔더 윅으로 걷어낸 뒤 확대경으로 본다', ok: true },
           { t: '땜납을 더 올려 녹인다', hint: '더 붙는다. 플럭스 + 솔더 윅으로 걷어낸다.' },
-          { t: 'DC 측정이라 그냥 둔다', hint: '이웃 신호(NTC·PD·ID·GND)가 붙어 센서를 못 읽는다.' }] }] },
+          { t: 'DC 측정이라 그냥 둔다', hint: '이웃 신호(SDA·SCL·3V3·PD·GND)가 붙어 센서를 못 읽는다.' }] }] },
 
-    { id: 't-tb-pin', phase: 'TB 납땜', title: '② 뒷면 핀 4개, 플랜지 위', focus: 'TB', view: 'iso', tool: 'iron',
+    { id: 't-tb-d2', phase: 'TB 납땜', title: '② 뒷빛 PD D2만 손으로 (아랫면)', focus: 'TB', view: 'below', tool: 'iron',
+      say: '아랫면 SMD는 D2 뒷빛 VBPW34S 하나라 손으로 납땜한다. 받침 창(5.3 × 6.4)으로 아래를 본다.',
+      tasks: [{ t: 'pick', items: [{ label: 'D2 뒷빛 PD (아랫면)', parts: [T.pdR], from: 'bottom' }],
+        decoys: [{ label: 'SMA 잭', like: [T.smaFm], hint: '큰 부품은 나중이다. 작은 D2부터.' }] }] },
+
+    { id: 't-tb-pin', phase: 'TB 납땜', title: '③ 뒷면 핀 4개, 플랜지 위', focus: 'TB', view: 'iso', tool: 'iron',
       say: '0906-1 4개를 (±6.45, ±6.45)에 윗면(플랜지 쪽)에서 끼우고 아랫면에서 납땜한다. 끝이 위로 서서 웨이퍼 뒷면 패드를 누른다.',
       tasks: [{ t: 'pick', items: [{ label: '핀 ×4 · 끝이 위', parts: Object.values(T.rpin), layout: 'grid', solder: 'bottom' }],
         decoys: [{ label: '핀 ×4 · 끝이 아래', like: Object.values(T.rpin), layout: 'grid', flip: true, hint: '거꾸로다. TB는 플랜지가 윗면이라 끝이 위로.' }] }] },
 
-    { id: 't-tb-sma', phase: 'TB 납땜', title: '③ SMA F−·S−', focus: 'TB', view: 'front', tool: 'iron',
+    { id: 't-tb-sma', phase: 'TB 납땜', title: '④ SMA F−·S−', focus: 'TB', view: 'front', tool: 'iron',
       say: 'Samtec SMA-J-P-H-ST-EM1을 판 가장자리에 밀어 끼우고 가운데 핀 + 다리 4개(위·아래)를 납땜한다. F− x −5, S− x +5.',
       tasks: [{ t: 'pick', items: [{ label: 'SMA F− (x −5)', parts: [T.smaFm], from: '+y' }, { label: 'SMA S− (x +5)', parts: [T.smaSm], from: '+y' }] }] },
 
@@ -298,7 +312,10 @@
         { t: 'probe', focus: 'TB', view: 'top', items: [
           { label: 'F− ↔ NE', part: T.rpin.NE, ref: T.smaFm, read: '< 0.5 Ω' }, { label: 'F− ↔ SW', part: T.rpin.SW, ref: T.smaFm, read: '< 0.5 Ω' },
           { label: 'S− ↔ NW', part: T.rpin.NW, ref: T.smaSm, read: '< 0.5 Ω' }, { label: 'S− ↔ SE', part: T.rpin.SE, ref: T.smaSm, read: '< 0.5 Ω' },
-          { label: 'FFC 5 ↔ 7 NTC', part: T.ntc, ref: T.ffc, read: '≈ 10 kΩ (25 °C)' },
+          { label: 'FFC 4 ↔ 1 3V3–GND', part: T.tmp, ref: T.ffc, read: '0 Ω 아님 (IC를 거친 큰 값은 괜찮음)' },
+          { label: 'FFC 5 ↔ 4 SDA–3V3', part: T.rc, ref: T.ffc, read: '≈ 4.7 kΩ (풀업)' },
+          { label: 'FFC 8 ↔ 4 SCL–3V3', part: T.rc, ref: T.ffc, read: '≈ 4.7 kΩ (풀업)' },
+          { label: 'FFC 5 ↔ 8 SDA–SCL', part: T.sht, ref: T.ffc, read: '단락 없음' },
           { label: 'FFC 3·6 PD, 빛 켜고', part: T.pdF, ref: T.ffc, read: '빛에 비례하는 전류' }] }] },
 
     { id: 't-balls', phase: '받침', title: '받침 아랫면: 강구 3개', focus: 'jig', view: 'below', tool: 'epoxy', enter: [['place', [T.base]]],
@@ -356,51 +373,51 @@
       tasks: [{ t: 'pick', items: [{ label: 'TT (납땜 끝)', assy: 'TT' }] }] },
 
     { id: 't-knob', phase: '윗판·노브', title: '노브 NOOSF3-14 2개', focus: 'jig', view: 'iso', tool: 'hand',
-      say: '윗판 구멍으로 받침 너트에 손으로 돌려 넣는다. 시료 없이 끝까지 조이지 않는다: 앞뒤 핀이 같은 자리라 끝끼리 닿는다(윗판이 기둥에서 1.6 mm 넘게 떠 있게, 계산).',
-      tip: '시료가 있으면 핀이 닿고 1.8바퀴 더 돌리면 기둥에 닿아 멈춘다(하드 스톱). 6.7바퀴 풀면 빠진다.',
+      say: '윗판 구멍으로 받침 너트에 손으로 돌려 넣는다. 시료 없이 끝까지 조이지 않는다: 앞뒤 핀이 같은 자리라 끝끼리 닿는다(윗판이 기둥에서 1.3 mm 넘게 떠 있게, 계산).',
+      tip: '시료가 있으면 핀이 닿고 1.8바퀴 더 돌리면 기둥에 닿아 멈춘다(하드 스톱). 6.2바퀴 풀면 빠진다.',
       tasks: [{ t: 'pick', items: [{ label: '노브 ×2', parts: T.knob, spin: 2 }],
         decoys: [{ label: '고정 나사 SCB3-10 ×2', like: T.fix, hint: '노브 자리에는 노브. 시료를 바꿀 때마다 공구 없이 연다.' }],
         after: [['lift', 2.5]] }] },
 
     { id: 't-final', phase: '마지막 점검', title: '조립 뒤 다시 재기', focus: 'jig', view: 'iso', tool: 'meter',
-      say: '탠덤 더미 기판은 아직 없다. 조립한 채로 SMA ↔ 핀, 앞뒤 핀 단락, NTC를 다시 본다.',
+      say: '탠덤 더미 기판은 아직 없다. 조립한 채로 SMA ↔ 핀, 앞뒤 핀 단락, I2C 센서, 플러그 NTC를 다시 본다.',
       tasks: [{ t: 'probe', items: [
         { label: 'F+ ↔ NE 앞 핀', part: T.fpin.NE, ref: T.smaFp, read: '< 0.5 Ω' },
         { label: 'F− ↔ NE 뒤 핀', part: T.rpin.NE, ref: T.smaFm, read: '< 0.5 Ω' },
         { label: 'F+ ↔ F− (시료 없음)', part: T.smaFm, ref: T.smaFp, read: '열림 (앞뒤 핀이 안 닿음)' },
-        { label: 'FFC 5 ↔ 7 판 NTC', part: T.ntc, ref: T.ffc, read: '≈ 10 kΩ (25 °C)' },
+        { label: 'I2C 스캔 (Pico, FFC 5·8)', part: T.tmp, ref: T.ffc, read: '0x49 TMP117 · 0x44 SHT45 찾음' },
         { label: 'FFC 2 ↔ 1 플러그 NTC', part: T.bead, ref: T.ffc, read: '≈ 10 kΩ (25 °C)', needs: T.plug }] }] },
   ];
 
   const CHECK = {
-    single: ['핀 12개가 수직, 아랫면 납땜에 브리지 없음 (확대경)', 'DB15 1–10 ↔ 핀 < 0.5 Ω, 이웃 핀·14 GND는 열림',
-      'NTC 11 ↔ 14 ≈ 10 kΩ (25 °C), PD 12는 빛에 비례', 'ID: Pico + 4.7 kΩ로 64비트 번호를 읽어 이름표·기록에',
+    single: ['받은 PCB: JLC SMD 있음·핀 1 맞음·브리지 없음', '핀 12개가 수직, 아랫면 납땜에 브리지 없음 (확대경)', 'DB15 1–10 ↔ 핀 < 0.5 Ω, 이웃 핀·14 GND는 열림',
+      '3V3(15) ↔ GND(14) 단락 없음, SDA(11)·SCL(13) ↔ 3V3 ≈ 4.7 kΩ, PD 12는 빛에 비례', 'Pico I2C 스캔: 0x49 TMP117 · 0x44 SHT45, TMP117 고유 번호를 이름표·기록에',
       '강구 3개가 2.5 mm 나와 책상에서 흔들리지 않음', '자석: 스테이션 판에 올리면 끌려 앉음',
       '볼트 SCB3-8 4개·SCB3-20 2개는 닿은 뒤 살짝 (POM 눌림 없음)', '뚜껑: 경첩이 부드럽고 +x 자석이 붙음',
       'DB15 블록: 케이블을 꽂고 뺄 때 PCB가 휘지 않음', '더미 D: 화소 4개 모두 ≈ 1 kΩ (키슬리 4선 1.000 kΩ ± 0.1 %)',
       '핀 마모 기록: 2선 값 − 1 kΩ를 날짜별로'],
-    tandem: ['핀 8개 수직 (TB 끝 위, TT 끝 아래), 납땜 브리지 없음', 'FFC J3 0.5 mm 다리 사이 브리지 없음 (확대경)',
+    tandem: ['핀 8개 수직 (TB 끝 위, TT 끝 아래), 납땜 브리지 없음', '받은 TB: JLC SMD·FFC J3 0.5 mm 다리 브리지 없음, D2만 손 납땜',
       'SMA ↔ 핀 < 0.5 Ω: F+·F− → NE·SW, S+·S− → NW·SE, 가운데 ↔ 다리는 열림',
-      'FFC 5 ↔ 7 판 NTC ≈ 10 kΩ, 2 ↔ 1 플러그 NTC ≈ 10 kΩ, 3·6 PD는 빛에 비례', 'ID (FFC 8): Pico + 4.7 kΩ로 번호 읽기',
+      'FFC 4(3V3) ↔ 1(GND) 단락 없음, 5·8 ↔ 4 ≈ 4.7 kΩ, 2 ↔ 1 플러그 NTC ≈ 10 kΩ, 3·6 PD는 빛에 비례', 'Pico I2C 스캔: 0x49 TMP117 · 0x44 SHT45 (FFC 5 SDA · 8 SCL)',
       '강구 3개 2.5 mm 돌출, 자석이 스테이션에 끌림', '고정 나사 SCB3-10 2개는 닿은 뒤 살짝 (POM)',
-      '노브를 풀면 스프링이 윗판을 3.5 mm 올림, 6.7바퀴 풀면 빠짐', '시료 없이 노브를 끝까지 조이지 않음 (앞뒤 핀 끝이 맞닿음)',
+      '노브를 풀면 스프링이 윗판을 3.5 mm 올림, 6.2바퀴 풀면 빠짐', '시료 없이 노브를 끝까지 조이지 않음 (앞뒤 핀 끝이 맞닿음)',
       '시료를 넣으면 핀이 닿고 1.8바퀴 더 → 기둥에서 멈춤', '뒷면 플러그 (쓸 때): 귀 x·y, 열패드가 웨이퍼 뒷면에 닿음'],
   };
   const NOTES = {
-    single: ['PCB S는 10/23 KiCad 판 기준 (아직 주문 전)', 'POM 부품(S1–S5)은 JLCCNC 견적 전, 치수는 CAD STEP',
+    single: ['PCB S는 10/23 KiCad 판 기준, SMD는 JLC 조립 (아직 주문 전)', 'POM 부품(S1–S5)은 JLCCNC 견적 전, 치수는 CAD STEP',
       '강구·자석 접착은 2액 에폭시 (연구실 재고 확인), 방법은 실물로 확인', '자석 극성 표시는 연습용 표시 (짝 자석에 대 보고 정함)',
-      '납땜 순서는 덱 "PCB assembly and first checks" 장 (SMD → 핀 → DB15 → SMA)'],
-    tandem: ['웨이퍼 25 × 25 × 0.25는 가정 (KIER 마스크 약 25 mm)', '핀 ±6.45는 KIER 마스크 사진 실측, 캘리퍼 확인 전',
-      'PCB TT·TB는 10/23 KiCad 판 기준 (아직 주문 전)', '탠덤 더미 기판은 아직 없음 (싱글 더미 D만 있음)',
-      '플러그 NTC 리드선 길이·길은 실물에서 정함', '"끝까지 조이면 핀 끝끼리 닿음"은 CAD 계산 (핀 자유 높이 4.5 × 2 = 9.0 > 판 사이 7.45)'],
+      '손 납땜 순서: 싱글 핀 → DB15, 탠덤 D2 → 핀 → SMA (SMD는 JLC)'],
+    tandem: ['웨이퍼 두께 0.5 mm (사용자 사진, 자로 재면 0.3–0.35) — 마이크로미터 확인 전 · 25 mm는 KIER 마스크 크기', '핀 ±6.45는 KIER 마스크 사진 실측, 캘리퍼 확인 전',
+      'PCB TT·TB는 10/23 KiCad 판 기준, TB SMD는 JLC 조립 (D2만 손, 아직 주문 전)', '탠덤 더미 기판은 아직 없음 (싱글 더미 D만 있음)',
+      '플러그 NTC 리드선 길이·길은 실물에서 정함', '"끝까지 조이면 핀 끝끼리 닿음"은 CAD 계산 (핀 자유 높이 4.5 × 2 = 9.0 > 판 사이 7.7)'],
   };
 
   const TRACKS = {
     single: { key: 'single', glb: 'single_prod', title: '제작 싱글', steps: SINGLE_STEPS,
-      assy: { S: { board: S.pcb, parts: [S.pcb, ...SPIN, S.db15, S.ntc, S.id, S.pd], at: [-92, 0, -3.55] } },
+      assy: { S: { board: S.pcb, jlc: [S.tmp, S.sht, S.pd, S.rc], parts: [S.pcb, ...SPIN, S.db15, S.tmp, S.sht, S.pd, S.rc], at: [-92, 0, -3.55] } },
       lid: [S.lid, ...S.cmagL], knobs: [], springs: [] },
     tandem: { key: 'tandem', glb: 'tandem_prod', title: '제작 탠덤', steps: TANDEM_STEPS,
-      assy: { TB: { board: T.tb, parts: [T.tb, ...Object.values(T.rpin), T.smaFm, T.smaSm, T.ntc, T.pdF, T.pdR, T.ffc, T.id], at: [-88, 0, -3.2] },
+      assy: { TB: { board: T.tb, jlc: [T.tmp, T.sht, T.pdF, T.ffc, T.rc], parts: [T.tb, ...Object.values(T.rpin), T.smaFm, T.smaSm, T.tmp, T.sht, T.pdF, T.pdR, T.ffc, T.rc], at: [-88, 0, -3.2] },
         TT: { board: T.tt, parts: [T.tt, ...Object.values(T.fpin), T.smaFp, T.smaSp], at: [88, 0, -11.0], lift: 3.5 } },
       lid: [], knobs: T.knob, springs: T.spring },
   };
@@ -531,7 +548,7 @@
     const a = tr.assyOf[p.name];
     if (a && st.assyOff[a]) pos.add(st.assyOff[a]);
     if ((a === 'TT' && st.ttAtJig) || tr.knobSet.has(p.name)) pos.z += st.lift;
-    if (tr.springSet.has(p.name)) { const L = 6.5 + (st.ttAtJig ? st.lift : 3.5); scale.z = L / 6.5; pos.z = 0.95 + L / 2; }   // pocket floor 0.95, free 10
+    if (tr.springSet.has(p.name)) { const L0 = p.size.z, L = L0 + (st.ttAtJig ? st.lift : 3.5); scale.z = L / L0; pos.z = p.c.z - L0 / 2 + L / 2; }   // compressed in the CAD, free = +3.5
     if (tr.lidSet.has(p.name) && st.lid) { quat.setFromAxisAngle(YAX, st.lid); pos.sub(HINGE).applyQuaternion(quat).add(HINGE); }
     return { pos, quat, scale };
   }
@@ -579,7 +596,7 @@
     m.position.set(0, 0, sign * 1.04);
   }
   function addSolder(p, side) {                     // fillet on the side opposite the flange (S/TB bottom face -1.6, TT top face 9.05)
-    const zf = side === 'top' ? 9.05 : -1.6, g = new THREE.CylinderGeometry(side === 'top' ? 0.42 : 0.95, side === 'top' ? 0.95 : 0.42, 0.55, 14);
+    const ttb = tr.parts[T.tt], zf = side === 'top' ? (ttb ? ttb.c.z + ttb.size.z / 2 : 9.3) : -1.6, g = new THREE.CylinderGeometry(side === 'top' ? 0.42 : 0.95, side === 'top' ? 0.95 : 0.42, 0.55, 14);
     g.rotateX(Math.PI / 2);
     const m = new THREE.Mesh(g, MAT.solder); m.userData.fxChild = true;
     m.position.set(0, 0, zf + (side === 'top' ? 0.275 : -0.275) - p.c.z); p.obj.add(m);
@@ -752,7 +769,7 @@
         const g = view.ghosts.find((x) => x.userData.target && x.userData.target.e === e && x.userData.target.k === k);
         e.tchips = e.tchips || []; e.tchips[k] = addChip(e.it.targets[k], topOf([g]), () => onTarget(e, k));
       }));
-    } else if (task.t === 'probe') {
+    } else if (task.t === 'probe' || task.t === 'inspect') {
       view.probeItems = task.items.filter((it) => !it.needs || (partOf(it.needs) || {}).placed).map((it, i) => ({ it, i, done: false }));
       const seen = new Set();
       for (const pi of view.probeItems) { const p = partOf(pi.it.part); if (p && !seen.has(p)) { seen.add(p); view.pickables.push({ obj: p.obj, on: () => onProbePart(p) }); } }
@@ -852,7 +869,7 @@
   async function benchBoard(key) {
     const A = tr.assy[key]; tr.st.assyOff[key] = new V3(...A.at);
     if (tr.holders[key]) tr.holders[key].visible = true;
-    await placeEnter([A.board]);
+    await placeEnter([A.board, ...(A.jlc || [])]);
   }
   async function runOps(ops) {
     for (const op of ops || []) {
@@ -882,7 +899,7 @@
     busy++;
     try {
       scene.updateMatrixWorld(true);
-      const moves = [[probes.red, probePoint(p, 1)], [probes.black, probePoint(ref, -1)]].map(([pr, t]) => {
+      const moves = task.t === 'inspect' ? [] : [[probes.red, probePoint(p, 1)], [probes.black, probePoint(ref, -1)]].map(([pr, t]) => {
         const q = new Q().setFromUnitVectors(new V3(0, 0, -1), t.dir), start = t.at.clone().addScaledVector(t.dir, -25);
         if (!pr.visible) { pr.position.copy(start); pr.quaternion.copy(q); pr.visible = true; }
         const p0 = pr.position.clone(), q0 = pr.quaternion.clone();
@@ -890,7 +907,7 @@
       });
       await Promise.all(moves);
       pi.done = true;
-      if (!instant) { const chip = addChip(pi.it.read, () => probes.red.localToWorld(new V3(0, 0, 9)), null, 'read'); setTimeout(() => { chip.el.remove(); view.chips = view.chips.filter((c) => c !== chip); }, 1300); }
+      if (!instant) { const chip = addChip(pi.it.read, task.t === 'inspect' ? topOf([p.obj]) : () => probes.red.localToWorld(new V3(0, 0, 9)), null, 'read'); setTimeout(() => { chip.el.remove(); view.chips = view.chips.filter((c) => c !== chip); }, 1300); }
       feedback('ok', `${pi.it.label}: ${pi.it.read}`);
     } finally { busy--; }
     if (view.probeItems.every((x) => x.done)) afterProgress(); else renderPicks();
@@ -912,7 +929,7 @@
     const task = taskNow(); if (!task) return;
     let complete = false;
     if (task.t === 'pick') complete = view.entries.every((e) => !e.ok || e.done);
-    else if (task.t === 'probe') complete = view.probeItems.every((x) => x.done);
+    else if (task.t === 'probe' || task.t === 'inspect') complete = view.probeItems.every((x) => x.done);
     else complete = true;
     if (!complete) { renderPicks(); return; }
     completeTask();
@@ -973,7 +990,7 @@
     if (step.tool && tr.st.tool !== step.tool) { onTool(step.tool, true); await sleep(380); }
     if (task.t === 'kit') { await sleep(300); await kitAll(); return; }
     if (task.t === 'quiz') { const i = task.opts.findIndex((o) => o.ok); await sleep(600); await onAnswer(i, true); return; }
-    if (task.t === 'probe') { for (const pi of view.probeItems.slice()) { if (!auto.on && !instant) return; await onProbe(pi, true); await sleep(160); } return; }
+    if (task.t === 'probe' || task.t === 'inspect') { for (const pi of view.probeItems.slice()) { if (!auto.on && !instant) return; await onProbe(pi, true); await sleep(160); } return; }
     const ents = view.entries.filter((e) => e.ok);
     for (const e of ents) {
       if (!auto.on && !instant) return;
@@ -1119,8 +1136,8 @@
     } else if (task.t === 'pick') {
       h = `<p class="lab">${task.target ? '부품 고르기 → 빛나는 자리' : '부품 쟁반 (번호 = 3D 번호)'}</p>` + view.entries.map((e, i) => `<button class="pk${e.done ? ' done' : ''}${e.selected && !e.done ? ' sel' : ''}" data-ent="${i}" type="button"><span class="n">${e.done ? '✓' : e.n}</span><span>${esc(e.it.label)}</span></button>`).join('');
       for (const e of view.entries) if (task.target && e.ok && e.selected) h += `<p class="lab">자리</p>` + e.it.targets.map((t, k) => `<button class="pk${e.parts[k].placed ? ' done' : ''}" data-tgt="${view.entries.indexOf(e)}:${k}" type="button"><span class="n">${e.parts[k].placed ? '✓' : k + 1}</span><span>${esc(t)}</span></button>`).join('');
-    } else if (task.t === 'probe') {
-      h = `<p class="lab">재기 (빛나는 부품을 눌러도 된다)</p>` + view.probeItems.map((pi, i) => `<button class="pk${pi.done ? ' done' : ''}" data-prb="${i}" type="button"><span class="n">${pi.done ? '✓' : i + 1}</span><span>${esc(pi.it.label)}${pi.done ? `<span class="rd">${esc(pi.it.read)}</span>` : ''}</span></button>`).join('');
+    } else if (task.t === 'probe' || task.t === 'inspect') {
+      h = `<p class="lab">${task.t === 'inspect' ? '확대경으로 보기 (빛나는 부품을 눌러도 된다)' : '재기 (빛나는 부품을 눌러도 된다)'}</p>` + view.probeItems.map((pi, i) => `<button class="pk${pi.done ? ' done' : ''}" data-prb="${i}" type="button"><span class="n">${pi.done ? '✓' : i + 1}</span><span>${esc(pi.it.label)}${pi.done ? `<span class="rd">${esc(pi.it.read)}</span>` : ''}</span></button>`).join('');
     } else if (task.t === 'quiz') {
       h = `<p class="lab">고르기</p>` + task.opts.map((o, i) => `<button class="pk" data-ans="${i}" type="button"><span class="n">${i + 1}</span><span>${esc(o.t)}</span></button>`).join('');
     }
