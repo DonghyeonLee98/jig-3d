@@ -38,14 +38,14 @@
   // ============================================================ part names (GLB node names)
   const PM = 'pin Mill-Max 0906-1 ';
   const S = {
-    base: 'base plate, production (POM black 4.0: also under the DB15 tab, 3 balls glued half-deep, 2 magnets, nuts for the DB15 block)',
+    base: 'base plate, production (POM black 4.0: also under the DB15 tab, 3 balls glued half-deep, 2 magnets, nuts for the DB15 block; pin-tail pockets for S and S-B, film-side window 28 -> 20)',
     balls: [1, 2, 3].map((i) => `kinematic ball ${i} (Tsubaki SBM-SUJ-5, SUJ2 d5, glued half-deep into the jig bottom)`),
     kmag: [1, 2].map((i) => `kinematic magnet ${i} (MISUMI HXNN6-2, jig side)`),
-    pcb: 'bottom PCB S, production (FR4 1.6 ENIG black, 12 pins, 13 x 16 film-side window, DB15 tab 56 mm, TMP117 + SHT45 (I2C) + photodiode placed by JLC; KiCad pcb_kicad/S)',
-    pin: { P1F: PM + 'P1F (-10.7,+2.0)', P1S: PM + 'P1S (-8.4,+3.5)', P2F: PM + 'P2F (-10.7,-2.0)', P2S: PM + 'P2S (-8.4,-3.5)',
-      P3F: PM + 'P3F (+10.7,-2.0)', P3S: PM + 'P3S (+8.4,-3.5)', P4F: PM + 'P4F (+10.7,+2.0)', P4S: PM + 'P4S (+8.4,+3.5)',
+    pcb: 'bottom PCB S, production (FR4 1.6 ENIG black, 12 pins, 15 x 16 film-side window, DB15 tab 56 mm, TMP117 + SHT45 (I2C) + photodiode placed by JLC; KiCad pcb_kicad/S)',
+    pin: { P1F: PM + 'P1F (-10.7,+2.0)', P1S: PM + 'P1S (-9.0,+3.6)', P2F: PM + 'P2F (-10.7,-2.0)', P2S: PM + 'P2S (-9.0,-3.6)',
+      P3F: PM + 'P3F (+10.7,-2.0)', P3S: PM + 'P3S (+9.0,-3.6)', P4F: PM + 'P4F (+10.7,+2.0)', P4S: PM + 'P4S (+9.0,+3.6)',
       ITO_aF: PM + 'ITO_aF (-4.4,+10.0)', ITO_bF: PM + 'ITO_bF (+4.4,+10.0)', ITO_cS: PM + 'ITO_cS (-4.4,-10.0)', ITO_dS: PM + 'ITO_dS (+4.4,-10.0)' },
-    db15: 'DB15 female right-angle NorComp 182-015-213R171 (8 pixel F/S + ITO F/S + I2C SDA/SCL/3V3 + PD)',
+    db15: 'DB15 female right-angle NorComp 182-015-213R531 (fork board locks; 8 pixel F/S + ITO F/S + I2C SDA/SCL/3V3 + PD)',
     block: 'DB15 block, production (POM black: flange behind a 1.45 mm front panel, 2 x 4-40 jackscrews Keystone 7229, 2 x SCB3-20 into nuts in the base)',
     jack: ['jackscrew 4-40 Keystone 7229 (left, panel -> DB15 flange)', 'jackscrew 4-40 Keystone 7229 (right, panel -> DB15 flange)'],
     bbolt: [1, 2].map((i) => `DB15 block bolt MISUMI SCB3-20 ${i} + nut SLBNR3 in the base|bolt`),
@@ -55,9 +55,10 @@
     rc: '100 nF 0603 + 4.7 k SDA/SCL pull-ups 0603 (JLC basic parts)',
     pd: 'photodiode Vishay VBPW34S (light monitor, faces up)',
     dowel: [1, 2].map((i) => `dowel pin MISUMI MS2-6 ${i} (PCB -> frame)`),
-    frame: 'frame v2 (POM: 0.8 mm edge ledge = hard stop, glass pocket, nut pockets, hinge knuckles, catch magnets)',
-    mask: 'aperture mask (stainless 0.1 mm, laser-cut like an SMT stencil; 4 x 2.5 mm + a blank dark mask)',
-    ring: 'press ring for 1.1T glass (1.1 mm: POM + 0.2 mm silicone; none for 2.2T)',
+    frame: 'frame v2 (POM: 0.8 mm edge ledge = hard stop, glass pocket, nut pockets, hinge knuckles (d2.48 press fit), catch magnets, engraved ITO / FILM DOWN)',
+    mask: 'aperture mask (stainless 0.2 mm like the lab mask, laser-cut like an SMT stencil; 4 x 2.5 mm + a blank dark mask)',
+    ring: 'press ring POM 1.0 for 1.1T glass (+ silicone foam 0.5; 2.2T: no ring, foam 0.4 only)',
+    foam: 'silicone foam sheet 0.5 free, squeezed to 0.30 by the lid (press-ring spring)',
     lid: 'hinged lid, production (POM black 2.5, bevelled window 19 -> 23 mm, magnetic catch on +x)',
     hinge: 'hinge pin MISUMI MS2.5-30 (d2.5 x 30)',
     cmagF: [1, 2].map((i) => `catch magnet ${i} (frame, MISUMI HXNN6-2)`),
@@ -75,7 +76,7 @@
     kmag: [1, 2].map((i) => `kinematic magnet ${i} (MISUMI HXNN6-2, jig side)`),
     tb: 'bottom PCB TB, production (FR4 1.6 ENIG black, rear pins F-/S- at ±6.45, window d15, SMA F-/S-, TMP117 + SHT45 + front PD + FFC placed by JLC, rear PD by hand; KiCad pcb_kicad/TB)',
     rpin: xy(PR),
-    frame: 'lower frame + corner posts (one part, POM, production: square pocket for the KIER mask pair + wafer, corner reliefs, sensor pocket, ledge, keyed pocket, vacuum ring, spring pockets)',
+    frame: 'lower frame + corner posts (one part, POM, production: square pocket for the KIER mask pair + wafer, corner reliefs, sensor pocket, engraved KEY +x+y, ledge, keyed pocket, vacuum ring, spring pockets)',
     fix: [1, 2].map((i) => `fixing screw MISUMI SCB3-10 ${i} (M3 x 10 A2-70)`),
     spring: [1, 2].map((i) => `lift spring MISUMI UL5-10 ${i} (OD5, free 10; lifts the top PCB)`),
     tt: 'top PCB TT, cross window, production (FR4 1.6 ENIG black, front pins F+/S+ at ±6.45 on tab discs, SMA F+/S+; KiCad pcb_kicad/TT)',
@@ -86,7 +87,7 @@
     smaFm: 'SMA edge jack F- Samtec SMA-J-P-H-ST-EM1 (bottom PCB)', smaSm: 'SMA edge jack S- Samtec SMA-J-P-H-ST-EM1 (bottom PCB)',
     nut: ['M3 nut SLBNR3 1 in the base under the PCB (knob)', 'M3 nut SLBNR3 2 in the base under the PCB (knob)',
       'M3 nut SLBNR3 3 in the base under the PCB (fixing screw)', 'M3 nut SLBNR3 4 in the base under the PCB (fixing screw)'],
-    plug: 'rear plug (removable, Al black: dark rear + thermal path; d9.5 boss through the rear mask window; drops in from the top, four 0.6 mm ears rest on the bottom PCB along x / y)',
+    plug: 'rear plug (removable, Al black: dark rear + thermal path; d9.5 boss through the rear mask window; drops in from the top, four 1 mm ears rest on the bottom PCB along x / y)',
     pad: 'silicone thermal pad 0.5 mm on the plug boss (insulating, touches the wafer rear through the rear-mask window)',
     bead: 'NTC bead TDK B57861S0103F040 in the plug top (wafer-rear temperature; leads down the d1.2 hole)',
     tmp: 'temperature TI TMP117AIDRVR on the bottom PCB (±0.1 °C, I2C 0x49, unique ID; beside the rear window)',
@@ -110,7 +111,7 @@
         { label: '힌지 뚜껑 S3 · POM 2.5 mm', qty: '1', parts: [S.lid] },
         { label: '아랫판 PCB S · FR4 1.6 ENIG', qty: '1', parts: [S.pcb] },
         { label: 'DB15 블록 S5 · POM', qty: '1', parts: [S.block] },
-        { label: 'DB15 암 NorComp 182-015-213R171', qty: '1', parts: [S.db15] },
+        { label: 'DB15 암 NorComp 182-015-213R531 (포크 보드락)', qty: '1', parts: [S.db15] },
         { label: '스프링 핀 Mill-Max 0906-1', qty: '12', parts: SPIN },
         { label: 'PCB에 JLC가 단 것: TMP117 · SHT45 · PD · 100 nF · 4.7 k', qty: '달려 옴', parts: [S.tmp, S.sht, S.pd, S.rc] },
         { label: '강구 SBM-SUJ-5 (Ø5 SUJ2)', qty: '3', parts: S.balls },
@@ -119,7 +120,7 @@
         { label: '볼트 SCB3-8 · SCB3-20', qty: '4 · 2', parts: [...S.bolt, ...S.bbolt] },
         { label: '너트 SLBNR3', qty: '6', parts: [...S.nut, ...S.bnut] },
         { label: '잭나사 4-40 Keystone 7229', qty: '2', parts: S.jack },
-        { label: '누름 링 S4 · 마스크 0.1 mm', qty: '1 · 1', parts: [S.ring, S.mask] },
+        { label: '누름 링 S4 (POM 1.0) + 실리콘 폼 0.5 · 마스크 0.2 mm', qty: '1 + 1 · 1', parts: [S.ring, S.foam, S.mask] },
         { label: '더미 기판 D (마지막 점검)', qty: '1', parts: [S.dummy] },
         { label: '2액 에폭시 · 플럭스 · 솔더 윅 · 확대경', qty: '—', parts: [] }] }] },
 
@@ -139,7 +140,7 @@
         decoys: [{ label: '핀 ×12 · 끝이 아래', like: SPIN, layout: 'grid', flip: true, hint: '거꾸로다. S판은 플랜지가 윗면이라 끝이 위로 선다.' }] }] },
 
     { id: 's-db15', phase: 'PCB 납땜', title: '③ DB15: 보드락 눌러 끼우고 납땜', focus: 'S', view: 'front', tool: 'iron',
-      say: 'NorComp 182-015-213R171을 탭 끝에 맞춰(테두리 뒷면 = 탭 끝) 보드락을 눌러 끼우고, 아랫면에서 15핀과 보드락을 납땜한다.',
+      say: 'NorComp 182-015-213R531을 탭 끝에 맞춰(테두리 뒷면 = 탭 끝; 10/24 PCB 자리를 0.38 mm 안쪽으로 고침) 포크 보드락을 눌러 끼우고, 아랫면에서 15핀과 보드락을 납땜한다.',
       tasks: [{ t: 'pick', items: [{ label: 'DB15 암 직각', parts: [S.db15] }],
         decoys: [{ label: 'DB15 블록 S5', like: [S.block], hint: 'POM 블록과 잭나사는 지그 조립 때, 납땜 뒤에 위에서 얹는다.' }] }] },
 
@@ -233,7 +234,7 @@
         { t: 'pick', items: [{ label: '더미 D · 패드 아래', parts: [S.dummy] }],
           decoys: [{ label: '더미 D · 패드 위', like: [S.dummy], flip: true, hint: '패드와 저항이 아랫면이다. 핀에 닿게 뒤집는다.' }] },
         { t: 'pick', ordered: true, orderHint: '마스크가 먼저, 누름 링은 그 위다.',
-          items: [{ label: '마스크 0.1 mm', parts: [S.mask] }, { label: '누름 링 S4', parts: [S.ring] }] },
+          items: [{ label: '마스크 0.2 mm', parts: [S.mask] }, { label: '누름 링 S4 + 실리콘 폼', parts: [S.ring, S.foam] }] },
         { t: 'pick', items: [{ label: '뚜껑 닫기', act: 'lidClose', parts: [S.lid] }] }] },
 
     { id: 's-dummy-dmm', phase: '마지막 점검', title: '② 화소마다 1 kΩ', focus: 'jig', view: 'iso', tool: 'meter',
@@ -422,7 +423,7 @@
       lid: [], knobs: T.knob, springs: T.spring },
   };
   // the 12 single pin positions (s2_pins) for the dummy pads
-  const SC_PINS = [[-10.7, 2], [-8.4, 3.5], [-10.7, -2], [-8.4, -3.5], [10.7, 2], [8.4, 3.5], [10.7, -2], [8.4, -3.5], [-4.4, 10], [4.4, 10], [-4.4, -10], [4.4, -10]];
+  const SC_PINS = [[-10.7, 2], [-9.0, 3.6], [-10.7, -2], [-9.0, -3.6], [10.7, 2], [9.0, 3.6], [10.7, -2], [9.0, -3.6], [-4.4, 10], [4.4, 10], [-4.4, -10], [4.4, -10]];
   const SPLIT = [{ re: /^bolt MISUMI SCB3-8 \d \(from below\) \+ nut SLBNR3$/, nut: (z) => z >= 3.39 },
     { re: /^DB15 block bolt MISUMI SCB3-20 \d \+ nut SLBNR3 in the base$/, nut: (z) => z <= -3.1 }];
 
