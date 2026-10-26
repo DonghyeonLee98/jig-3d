@@ -1,4 +1,4 @@
-// measure.js — 측정 연습: 3D 지그 + 계산한 J–V (one-diode model)
+// measure.js — 측정 연습: 3D 지그 + 계산한 J–V (one-diode model); 탠덤 3T = the tandem run + the T–M voltage probe (midRead, 10/26)
 // Part 1: physics (no DOM). Everything here is plain numbers so it can be self-tested.
 (function () {
 'use strict';
@@ -19,6 +19,11 @@ const TRACKS = {
     rLead: 0.15,           // SMA–BNC 1 m + BNC–banana + PCB, per side (assumed)
     vMin: -30, vMax: 4.5 },
 };
+// 탠덤 3T (10/26): the same jig and T–B J–V as the tandem; the mid terminal (recombination ITO, 25 nm) is read as a voltage probe.
+// sub: the two sub-cell diodes that split the terminal voltage (ASSUMED 예시: Voc 1.20 + 0.70 = the tandem 1.90, same photocurrent);
+// rLat: lateral ITO resistance from the active area to the corner pad if current is forced through M (60–120 Ω/sq -> 70–290 Ω, 150 Ω taken).
+// The two ideality factors add up to the tandem's n (1.5 + 0.9 = 2.4) and the two Voc to its Voc (1.20 + 0.70 = 1.90), so the series pair is the tandem diode.
+TRACKS.tandem3t = Object.assign({}, TRACKS.tandem, { name: '탠덤 3T', sub: { pvk: { Voc: 1.20, n: 1.5 }, si: { Voc: 0.70, n: 0.9 }, rLat: 150, aSmall: 0.04 } });
 
 // contact resistance of one pin vs force: 20 mΩ at full force (Mill-Max spec) plus a surface-film
 // term that grows fast at light force (ASSUMED shape and size: for practice only, not measured)
@@ -59,20 +64,22 @@ function calibrate(key) {
   for (let k = 0; k < 60; k++) { const m = (lo + hi) / 2; if (ffOf(build(m), T.aMask).FF > t.FF) lo = m; else hi = m; }
   return build((lo + hi) / 2);
 }
-const DEV = { single: calibrate('single'), tandem: calibrate('tandem') };
+const DEV = { single: calibrate('single'), tandem: calibrate('tandem'), tandem3t: calibrate('tandem3t') };
 
 // ---- the state a practice run is built from
 function defaultState(track) {
   return { track, station: null, cell: null, mask: null, ring: null, lid: 'open', knobs: [-1, -1],
     db15: false, rotary: 0, jacks: { HI: '', LO: '', SHI: '', SLO: '' },
     pc: { connected: false, fourWire: false, vStart: -0.1, vStop: 1.3, step: 0.01, delay: 50, dir: 'both', comp: 10, area: '' },
-    light: { lamp: false, shutter: false, level: 0.93, refRead: null } };
+    light: { lamp: false, shutter: false, level: 0.93, refRead: null },
+    mid: { window: null, pad: null, mode: null, chain: false } };   // 3T only: wiped corner, what is under the mid pins, where M-F/M-S go, multimeter chain check
 }
 function correctState(track) {
   const s = defaultState(track);
   s.station = 'ok'; s.cell = track === 'single' ? 'down' : 'up'; s.mask = 'ok';
   if (track === 'single') { s.ring = 'in'; s.lid = 'closed'; s.db15 = true; s.rotary = 1; }
   else s.knobs = [1.8, 1.8];
+  if (track === 'tandem3t') s.mid = { window: 'ok', pad: 'ag', mode: 'probe', chain: true };
   s.jacks = { HI: 'F+', LO: 'F-', SHI: 'S+', SLO: 'S-' };
   s.pc = { connected: true, fourWire: true, vStart: -0.1, vStop: track === 'single' ? 1.3 : 2.0, step: 0.01, delay: 50, dir: 'both',
     comp: track === 'single' ? 10 : 50, area: String(TRACKS[track].aMask) };
@@ -98,21 +105,23 @@ function pinForces(s) {
 
 // build the electrical picture of a state: what the 2400 sees
 function circuit(s) {
-  const T = TRACKS[s.track], dev0 = DEV[s.track], out = { open: false, why: [], runaway: false, pol: 1, notes: {} };
-  const extraR = (s.track === 'tandem' && s.mask === 'rot') ? 30 : 0;    // pin on mask steel instead of the pad (ASSUMED 30 Ω)
+  const T = TRACKS[s.track], dev0 = DEV[s.track], si = s.track === 'single', out = { open: false, why: [], runaway: false, pol: 1, notes: {} };
+  const extraR = (!si && s.mask === 'rot') ? 30 : 0;    // pin on mask steel instead of the pad (ASSUMED 30 Ω)
   const pf = pinForces(s); out.forces = pf;
   const gR = (name) => par(...pf.groups[name].map((F) => pinR(F) + extraR));
   if (s.station == null) { out.open = true; out.why.push('nojig'); }
   if (s.cell == null) { out.open = true; out.why.push('nocell'); }
-  if (s.track === 'single') {
+  if (si) {
     if (s.cell === 'up') { out.open = true; out.why.push('upside'); }
     if (!s.db15) { out.open = true; out.why.push('nodb15'); }
     if (!s.rotary) { out.open = true; out.why.push('rotaryoff'); }
   }
   let polCell = 1;
-  if (s.track === 'tandem' && s.cell === 'flip') polCell = -1;           // front pins on the Si-side (−) pads
+  if (!si && s.cell === 'flip') polCell = -1;           // front pins on the Si-side (−) pads
   // leads: which jig lead is in which 2400 jack
   const J = s.jacks, sign = (l) => (l ? (l[1] === '+' ? 1 : -1) : 0);
+  // 3T: an M lead in the 2400 loop would drive the cell current through the 25 nm recombination ITO -> never; treated as no T–B loop
+  if (Object.values(J).some((l) => /^M-/.test(l || ''))) { out.open = true; out.why.push('midloop'); }
   if (!J.HI || !J.LO) { out.open = true; out.why.push('noforce'); }
   else if (sign(J.HI) === sign(J.LO)) { out.open = true; out.why.push('sameside'); }
   const polLead = sign(J.HI) || 1;
@@ -120,16 +129,17 @@ function circuit(s) {
   // series loss on each side: force path = pins of the lead in HI/LO + cable
   const side = (forceLead, senseLead) => {
     if (!forceLead) return null;
+    if (/^M-/.test(forceLead)) return { open: true };                   // M is not a T–B force path
     const Rf = gR(forceLead) + T.rLead;
     if (!isFinite(Rf)) return { open: true };
-    const senseOk = s.pc.fourWire && senseLead && sign(senseLead) === sign(forceLead) && isFinite(gR(senseLead));
+    const senseOk = s.pc.fourWire && senseLead && !/^M-/.test(senseLead) && sign(senseLead) === sign(forceLead) && isFinite(gR(senseLead));
     // remote sense makes up the lead drop up to SENSE_LIMIT; without sense (2-wire, or sense lead missing:
     // ASSUMED to fall back to the force side inside the 2400) the whole drop stays in the curve
     return { Rf, sense: senseOk, loss: (i) => { const d = Math.abs(i) * Rf; return Math.sign(i) * (senseOk ? Math.max(0, d - SENSE_LIMIT) : d); } };
   };
   const plus = side(J.HI, J.SHI), minus = side(J.LO, J.SLO);
   if ((plus && plus.open) || (minus && minus.open)) { out.open = true; out.why.push('nocontact'); }
-  if (s.pc.fourWire && J.HI && J.SHI && sign(J.SHI) !== sign(J.HI)) out.runaway = true;    // sense reversed: loop runs away
+  if (s.pc.fourWire && J.HI && J.SHI && !out.why.includes('midloop') && sign(J.SHI) !== sign(J.HI)) out.runaway = true;    // sense reversed: loop runs away
   if (s.pc.fourWire && (!J.SHI || !J.SLO)) out.notes.senseMissing = true;
   out.loss = (i) => (plus && !plus.open ? plus.loss(i) : 0) + (minus && !minus.open ? minus.loss(i) : 0);
   out.Rext = (plus && plus.Rf || 0) + (minus && minus.Rf || 0);
@@ -138,7 +148,7 @@ function circuit(s) {
   let L = s.light.lamp && s.light.shutter ? s.light.level : 0;
   if (s.station === 'tilt') L *= 0.97;                                  // off its seat: off the beam centre (ASSUMED −3 %)
   let aIll = T.aMask;
-  if (s.track === 'single') { if (s.mask === 'shift') aIll = 0.6 * T.aMask; if (s.mask === 'none') aIll = T.aDev; }
+  if (si) { if (s.mask === 'shift') aIll = 0.6 * T.aMask; if (s.mask === 'none') aIll = T.aDev; }
   else { if (s.mask === 'none') aIll = 1.05 * T.aMask;                 // light past the 1 cm edge (ASSUMED +5 %)
     if (s.mask === 'rot') aIll = 0.92 * T.aMask;                        // rotated pair shades a corner (ASSUMED 8 %)
     if (s.cell === 'flip') L *= 0.02; }                                  // light enters Si first: PVK (limiting) cell starves (ASSUMED 2 %)
@@ -161,7 +171,7 @@ function simulate(s) {
   const r = rng(hash(JSON.stringify(s)));
   // hysteresis (ASSUMED, simple): forward scan has higher J0 and Rs; it fades for slow scans (long delay)
   const h = 0.04 / (1 + (parseFloat(p.delay) || 0) / 200);
-  const chatter = s.track === 'tandem' ? c.forces.F < 0.2 && c.forces.F > 0 : c.forces.F < 0.01;
+  const chatter = s.track !== 'single' ? c.forces.F < 0.2 && c.forces.F > 0 : c.forces.F < 0.01;
   const run = (dir) => {
     const dev = Object.assign({}, c.dev);
     if (dir === 'fwd') { dev.I0 *= Math.exp(0.4 * h * T.target.Voc / (dev.n * VT)); dev.Rs *= 1 + 4 * h; }
@@ -185,7 +195,35 @@ function simulate(s) {
   const dirs = p.dir === 'both' ? ['rev', 'fwd'] : [p.dir];
   for (const d of dirs) res.scans.push(run(d));
   res.area = area; res.comp = comp; res.h = h;
+  if (s.track === 'tandem3t') res.mid = midRead(s, c, res);
   return res;
+}
+
+// 3T: what the voltage probe on M reads along the reverse scan (예시, ASSUMED: the tandem junction voltage Vd = V + I·Rs + lead drop is shared by
+// two series diodes with the same excess current x: Vd = n1 kT/q ln(1 + x/I01) + n2 kT/q ln(1 + x/I02), I0k from each sub-cell Voc at the same
+// photocurrent; V_pvk is the first term). The reading is V_pvk when M carries no current (probe); + I·rLat (volts) when the cell current is forced
+// through M; 0 when the wrong corner was wiped (M sits on IZO = T). V_si = V - V_pvk.
+function midRead(s, c, res) {
+  const T = TRACKS[s.track], sub = T.sub, m = s.mid, dev = c.dev, area = res.area;
+  const nvt = (k) => sub[k].n * VT, I0 = { pvk: dev.Iph / Math.expm1(sub.pvk.Voc / nvt('pvk')), si: dev.Iph / Math.expm1(sub.si.Voc / nvt('si')) };
+  const Vsum = (x) => nvt('pvk') * Math.log(1 + x / I0.pvk) + nvt('si') * Math.log(1 + x / I0.si);
+  const vPvk = (Vd) => { let lo = -Math.min(I0.pvk, I0.si) * (1 - 1e-9), hi = Math.max(dev.Iph, 1e-6) * 10;    // Vsum is monotonic in x
+    for (let k = 0; k < 140; k++) { const mid = (lo + hi) / 2; if (Vsum(mid) > Vd) hi = mid; else lo = mid; }
+    return nvt('pvk') * Math.log(1 + (lo + hi) / 2 / I0.pvk); };
+  const sc = res.scans[0], pts = sc.pts;
+  const pick = (f) => pts.reduce((a, b) => (f(b) > f(a) ? b : a));
+  const atJsc = pick((p) => -Math.abs(p.v)), atVoc = pick((p) => -Math.abs(p.j)), atMpp = pick((p) => (p.v > 0 && p.j > 0 ? p.v * p.j : -1));
+  const read = (p) => {
+    const I = p.j * area / 1000, vp = c.open ? 0 : vPvk(p.v + I * dev.Rs + (c.loss ? c.loss(I) : 0));
+    let Vread = vp, err = 0;
+    if (m.window === 'key') Vread = 0;                                  // M on the un-wiped top electrode: shorted to T
+    else if (m.mode === 'drive') { err = Math.abs(I) * sub.rLat; Vread = vp + err; }   // cell current through the ITO: lateral drop adds
+    else if (m.mode == null) Vread = null;
+    return { V: p.v, J: p.j, Vpvk: vp, Vsi: p.v - vp, Vread, err };
+  };
+  const iSmall = (sc.fig.Jsc || 0) / 1000 * sub.aSmall;                  // Si Jsc with a 2 x 2 mm illumination spot through M–B
+  return { atJsc: read(atJsc), atMpp: read(atMpp), atVoc: read(atVoc), small: { I: iSmall, drop: iSmall * sub.rLat, a: sub.aSmall },
+    dropFull: (sc.fig.Jsc || 0) / 1000 * area * sub.rLat };
 }
 
 function extract(pts) {
@@ -205,7 +243,7 @@ function extract(pts) {
   return f;
 }
 
-window.JV = { VT, TRACKS, DEV, pinR, pinForces, circuit, simulate, extract, defaultState, correctState, SENSE_LIMIT, PIN_F_STOP };
+window.JV = { VT, TRACKS, DEV, pinR, pinForces, circuit, simulate, midRead, extract, defaultState, correctState, SENSE_LIMIT, PIN_F_STOP };
 })();
 
 // Part 2: what went wrong (Korean, one or two sentences each) and the self-test
@@ -227,9 +265,10 @@ function diagnose(s, res) {
   if (why.includes('noforce')) add('키슬리 HI 또는 LO에 F 선이 없습니다. 전류가 흐를 길이 없어 잡음만 나옵니다.');
   if (why.includes('sameside')) add('HI와 LO에 같은 쪽(+끼리 또는 −끼리) 선을 꽂아 셀을 거치지 않습니다 → 잡음만.');
   if (why.includes('nocontact')) add('핀이 패드에 닿지 않은 쪽이 있어(노브가 핀 닿기 전) 회로가 열렸습니다.');
+  if (why.includes('midloop')) add('M-F/M-S를 키슬리 2400 루프에 꽂았습니다 → 셀 전류가 25 nm 재결합 ITO를 가로질러 M으로 흐릅니다. 금지: M은 전압 읽기 전용(I ≈ 0)이고, T–B 루프는 F+/S+·F−/S−로만. (연습에서는 T–B 루프가 없는 것으로 봅니다.)');
   if (c.runaway) add('센스 선을 반대로 꽂아(SENSE HI에 − 쪽) 키슬리가 전압을 거꾸로 맞추다 끝까지 달아납니다 → 전류가 compliance에 붙습니다. 실제로는 셀이 상할 수 있습니다.');
   if (!c.open && !c.runaway && c.polLead < 0) add('F+/F−를 HI/LO에 반대로 꽂아 극성이 바뀌었습니다 → 곡선이 뒤집혀(전류 음수) Voc를 못 찾습니다.');
-  if (s.track === 'tandem' && s.cell === 'flip') add('웨이퍼를 뒤집어 넣어 앞 핀이 Si 쪽 패드에 닿았고(극성 반대), 빛이 Si를 먼저 지나 전류를 제한하는 PVK 쪽에 거의 오지 않습니다(가정 2 %).');
+  if (s.track !== 'single' && s.cell === 'flip') add('웨이퍼를 뒤집어 넣어 앞 핀이 Si 쪽 패드에 닿았고(극성 반대), 빛이 Si를 먼저 지나 전류를 제한하는 PVK 쪽에 거의 오지 않습니다(가정 2 %).');
   if (!(s.light.lamp && s.light.shutter)) add('램프가 꺼졌거나 셔터가 닫혀 dark 곡선입니다: Jsc ≈ 0, 순바이어스에서만 전류가 커집니다.');
   else if (Math.abs(s.light.level - 1) > 0.015) add('기준 셀로 1 sun을 맞추지 않아 빛이 ' + f1(s.light.level, 2) + ' sun입니다 → Jsc가 그 비율만큼, Voc는 조금(nkT/q·ln) 바뀝니다.');
   if (s.station === 'tilt') add('지그가 강구 홈에 덜 앉아 셀이 빛 가운데에서 비켜났습니다 → 빛이 조금 약합니다(가정 −3 %).');
@@ -243,6 +282,16 @@ function diagnose(s, res) {
     if (t[0] < 1.75 || t[1] < 1.75) add('노브가 멈춤까지 덜 조여졌습니다(노브 1 ' + f1(t[0], 1) + ', 노브 2 ' + f1(t[1], 1) + ' / 1.8바퀴) → 가장 약한 핀 ' + f1(Fm, 2) + ' N, 접촉 저항 약 ' + f1(J.pinR(Fm), Fm > 0.25 ? 2 : 0) + ' Ω(가정 곡선).');
     if (s.mask === 'rot') add('마스크 쌍이 돌아가 핀이 구멍 대신 마스크 금속을 누릅니다 → 접촉 저항이 커지고(가정 30 Ω) 창 모서리가 가려집니다.');
     if (s.mask === 'none') add('KIER 마스크 없이 재서 1 cm 창 밖 빛까지 들어옵니다 → Jsc가 조금 높습니다(가정 +5 %).');
+  }
+  if (s.track === 'tandem3t' && res.mid) {
+    const m = s.mid, M = res.mid;
+    if (m.window === 'key') add('키 모서리(+x,+y)를 닦았습니다. TT3의 M 핀은 대각 반대 (−x,−y)에 있어 닦지 않은 IZO 위에 앉습니다 → M = T, T–M 읽기 0 V. 사슬 점검에서 M ↔ F+가 단락으로 나옵니다.');
+    else if (m.window == null) add('창을 닦았는지 고르지 않았습니다. 장착 전 키 대각 반대 모서리 4.4 mm 창의 상부셀 스택을 DMF 면봉으로 걷어내야 M 핀이 재결합 ITO(패드)에 닿습니다.');
+    if (m.pad === 'bare') add('mid 핀을 맨 ITO에 바로 댔습니다. 전류 0 읽기라 지금 값에는 영향이 없지만(가정) 25 nm ITO는 0.72 N 왕관 팁의 반복 장착에서 뚫립니다 → Ag mid 패드 또는 Ag 페이스트 점, 아니면 M1·M2만 둥근 팁·낮은 하중 핀.');
+    else if (m.pad == null) add('mid 핀 아래가 무엇인지 고르지 않았습니다 (Ag 패드 / Ag 페이스트 / 맨 ITO).');
+    if (m.mode === 'drive') add('M–B로 1 cm² 전체의 전류를 흘렸습니다 → 재결합 ITO 가로 전압강하 I·R ≈ ' + f1(M.dropFull, 2) + ' V(약 150 Ω 가정)가 T–M 읽기에 더해져 V_PVK를 쓸 수 없고 면적 안 전압이 고르지 않습니다. 하지 말 것: 서브셀 Jsc는 소면적 조명으로만.');
+    else if (m.mode == null) add('M-F·M-S를 어디에 꽂을지 고르지 않았습니다 (고임피던스 전압 읽기 = T–M V_PVK).');
+    if (!m.chain) add('멀티미터 사슬 점검을 건너뛰었습니다: M-F ↔ M-S 수십 Ω(ITO), M ↔ F+(위 패드) 단락 아님, M ↔ F−(아래) 열림(다이오드만)을 먼저 봐야 창·패드가 맞는지 압니다.');
   }
   if (!c.open && !c.runaway) {
     if (!s.pc.fourWire) add('2선 측정이라 핀·케이블 저항 약 ' + f1(c.Rext, 2) + ' Ω이 직렬로 들어갑니다. 전류가 큰 탠덤(약 20 mA)에서 FF가 더 떨어집니다.');
@@ -259,6 +308,11 @@ function diagnose(s, res) {
   if (!msg.length) {
     if (rev.Voc && Math.abs(rev.Voc - ref.Voc) / ref.Voc < 0.02 && Math.abs(rev.FF - ref.FF) < 0.02) add('제대로 연결됐습니다. 역방향 값이 예시 값과 같고, 순방향과의 차이는 히스테리시스(가정)입니다.');
     else add('설정은 맞지만 값이 예시와 다릅니다. 스윕 간격·지연을 확인하세요.');
+    if (s.track === 'tandem3t' && res.mid) {
+      const M = res.mid;
+      if (s.mid.mode === 'probe') add('3T: T–M을 전류 0으로 읽어 V_PVK = Voc점 ' + f1(M.atVoc.Vread, 2) + ' V · MPP ' + f1(M.atMpp.Vread, 2) + ' V · Jsc점 ' + f1(M.atJsc.Vread, 2) + ' V (예시: 서브셀 다이오드 가정). ITO 면저항·접촉 저항은 들어오지 않습니다.');
+      if (s.mid.mode === 'si') add('3T: M–B Si Jsc는 소면적 조명(' + Math.sqrt(M.small.a) * 10 + ' × ' + Math.sqrt(M.small.a) * 10 + ' mm)으로만 — 전류 약 ' + f1(M.small.I * 1000, 2) + ' mA, 가로 전압강하 I·R ≈ ' + f1(M.small.drop, 2) + ' V(150 Ω 가정) → 역바이어스로 보상. 전면적이면 ' + f1(M.dropFull, 1) + ' V라 불가.');
+    }
   }
   return msg;
 }
@@ -300,6 +354,17 @@ function selfTest() {
   f = mod('tandem', (s) => { s.pc.vStop = 1.3; }); check('탠덤 싱글 설정(1.3 V) 그대로 → Voc 없음', f.Voc == null, 'Voc ' + f1(f.Voc, 3));
   f = mod('tandem', (s) => { s.cell = 'flip'; }); check('탠덤 웨이퍼 뒤집힘 → Voc 없음', f.Voc == null, 'Jsc ' + f1(f.Jsc, 3));
   f = mod('tandem', (s) => { s.jacks = { HI: 'F+', LO: 'F-', SHI: 'S-', SLO: 'S+' }; }); check('탠덤 센스 반대 → compliance', f.Voc == null, 'Jsc ' + f1(f.Jsc, 2));
+  // 3T: the T–B curve is the tandem one; the M probe splits the voltage; every misuse of M shows
+  const M0 = J.simulate(C('tandem3t')), m0 = M0.mid, T3 = J.TRACKS.tandem3t;
+  check('3T: 바른 순서 = 탠덤 예시 값 (T–B)', Math.abs(M0.scans[0].fig.Voc / T3.target.Voc - 1) < 0.02 && Math.abs(M0.scans[0].fig.Jsc / T3.target.Jsc - 1) < 0.02, 'Voc ' + f1(M0.scans[0].fig.Voc, 3) + ' Jsc ' + f1(M0.scans[0].fig.Jsc, 2));
+  check('3T 프로브: V_PVK(Voc점) ≈ 1.20, V_Si ≈ 0.70, V_PVK(Jsc점) ≈ 0', Math.abs(m0.atVoc.Vread - T3.sub.pvk.Voc) < 0.03 && Math.abs(m0.atVoc.Vsi - T3.sub.si.Voc) < 0.03 && Math.abs(m0.atJsc.Vread) < 0.1,
+    'V_PVK ' + f1(m0.atVoc.Vread, 3) + ' V_Si ' + f1(m0.atVoc.Vsi, 3) + ' @Jsc ' + f1(m0.atJsc.Vread, 3));
+  check('3T 프로브: MPP에서 0 < V_PVK < V', m0.atMpp.Vread > 0 && m0.atMpp.Vread < m0.atMpp.V, 'V_PVK ' + f1(m0.atMpp.Vread, 3) + ' / V ' + f1(m0.atMpp.V, 3));
+  const modM = (fn) => { const s = C('tandem3t'); fn(s); return J.simulate(s); };
+  let r = modM((s) => { s.mid.mode = 'drive'; }); check('3T M으로 전면적 전류 → 읽기 오차 > 1 V', r.mid.atJsc.err > 1 && r.mid.atJsc.Vread > r.mid.atJsc.Vpvk + 1, 'I·R ' + f1(r.mid.atJsc.err, 2) + ' V');
+  r = modM((s) => { s.mid.window = 'key'; }); check('3T 키 모서리를 닦음 → T–M 0 V', r.mid.atVoc.Vread === 0 && r.scans[0].fig.Voc != null, 'V_read ' + f1(r.mid.atVoc.Vread, 2));
+  r = modM((s) => { s.jacks.HI = 'M-F'; }); check('3T M-F를 2400 HI에 → 잡음만 (금지)', r.circuit.why.includes('midloop') && (r.scans[0].fig.Jsc == null || Math.abs(r.scans[0].fig.Jsc) < 0.05), 'Jsc ' + f1(r.scans[0].fig.Jsc, 4));
+  r = modM((s) => { s.mid.mode = 'si'; }); check('3T 소면적 Si Jsc → 가로 강하 < 0.2 V, 전면적 > 1 V', r.mid.small.drop < 0.2 && r.mid.dropFull > 1, 'small ' + f1(r.mid.small.drop, 3) + ' full ' + f1(r.mid.dropFull, 2));
   const pass = out.filter((x) => x.ok).length;
   return { pass, total: out.length, results: out };
 }
@@ -316,13 +381,16 @@ const f = (x, d) => (x == null || !isFinite(x) ? '–' : x.toFixed(d));
 const STEPS = {
   single: [['station', '지그 올리기'], ['cell', '셀 넣기'], ['mask', '마스크·링'], ['lid', '뚜껑 닫기'], ['wire', '선 연결'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
   tandem: [['station', '지그 올리기'], ['mask', '마스크 쌍'], ['cell', '포켓에 넣기'], ['knob', '노브 조이기'], ['wire', '선 연결'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
+  tandem3t: [['station', '지그 올리기'], ['mask', '마스크 쌍 (3T)'], ['cell', '포켓에 넣기'], ['knob', '노브 조이기'], ['wire', 'T–B 선 연결'], ['mid', '3T: M 연결'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
 };
-const VIEW = { station: 'jig', cell: 'jig', mask: 'jig', lid: 'jig', knob: 'jig', wire: 'bench', pc: 'keithley', light: 'lamp', run: 'bench' };
+const VIEW = { station: 'jig', cell: 'jig', mask: 'jig', lid: 'jig', knob: 'jig', wire: 'bench', mid: 'bench', pc: 'keithley', light: 'lamp', run: 'bench' };
 const LEADS = { single: { 'F+': 'F+ (ITO F)', 'S+': 'S+ (ITO S)', 'F-': 'F− (화소 F)', 'S-': 'S− (화소 S)' },
   tandem: { 'F+': 'F+ (윗판 SMA)', 'S+': 'S+ (윗판 SMA)', 'F-': 'F− (아랫판 SMA)', 'S-': 'S− (아랫판 SMA)' } };
+LEADS.tandem3t = Object.assign({}, LEADS.tandem, { 'M-F': 'M-F (윗판 −y SMA, 3T mid)', 'M-S': 'M-S (윗판 −y SMA, 3T mid)' });
 const JACKS = [['HI', 'HI'], ['LO', 'LO'], ['SHI', 'SENSE HI'], ['SLO', 'SENSE LO']];
+const GLB = { single: 'single_prod', tandem: 'tandem_prod', tandem3t: 'tandem_prod_3t' };
 
-let track = 'single', S = { single: J.defaultState('single'), tandem: J.defaultState('tandem') }, st = S.single, cur = 0, last = { single: null, tandem: null };
+let track = 'single', S = { single: J.defaultState('single'), tandem: J.defaultState('tandem'), tandem3t: J.defaultState('tandem3t') }, st = S.single, cur = 0, last = { single: null, tandem: null, tandem3t: null };
 
 function done(id, s) {
   switch (id) {
@@ -331,7 +399,8 @@ function done(id, s) {
     case 'mask': return s.mask != null && (s.track === 'tandem' || s.ring != null);
     case 'lid': return s.lid !== 'open';
     case 'knob': return s.knobs[0] >= 0 && s.knobs[1] >= 0;
-    case 'wire': return !!(s.jacks.HI && s.jacks.LO && s.jacks.SHI && s.jacks.SLO) && (s.track === 'tandem' || (s.db15 && s.rotary));
+    case 'wire': return !!(s.jacks.HI && s.jacks.LO && s.jacks.SHI && s.jacks.SLO) && (s.track !== 'single' || (s.db15 && s.rotary));
+    case 'mid': return s.mid.chain && s.mid.mode != null && s.mid.window != null && s.mid.pad != null;
     case 'pc': return s.pc.connected && parseFloat(s.pc.area) > 0;
     case 'light': return s.light.lamp && s.light.shutter && s.light.refRead != null;
     case 'run': return !!last[s.track];
@@ -342,29 +411,31 @@ function get(path) { return path.split('.').reduce((o, k) => o[k], st); }
 function set(path, v) { const ks = path.split('.'), k = ks.pop(); ks.reduce((o, q) => o[q], st)[k] = v; }
 
 function cardHTML(id) {
-  const T = J.TRACKS[track], si = track === 'single';
+  const T = J.TRACKS[track], si = track === 'single', t3 = track === 'tandem3t', N = (cur + 1) + '. ';
   switch (id) {
-    case 'station': return '<h2>1. 지그를 스테이션에 올리기</h2><p>바닥 강구 3개가 스테이션 홈(MS3-10 두 개씩)에 들어가고 자석이 당기면 “딸깍” 앉습니다. 지그를 빼고 다시 올려도 같은 자리입니다.</p><div class="opts">' +
+    case 'station': return '<h2>' + N + '지그를 스테이션에 올리기</h2><p>바닥 강구 3개가 스테이션 홈(MS3-10 두 개씩)에 들어가고 자석이 당기면 “딸깍” 앉습니다. 지그를 빼고 다시 올려도 같은 자리입니다.</p><div class="opts">' +
       opt('station', 'ok', '강구 3개를 홈에 맞춰 내려놓기') + opt('station', 'tilt', '대충 올림 (강구 하나가 홈 밖)') + '</div>';
     case 'cell': return si
-      ? '<h2>2. 셀 넣기</h2><p>막면을 아래로 해 핀 12개 위에 놓습니다(교수님 “핀은 모두 bottom”). 자른 모서리를 포켓 키에 맞추면 유리가 0.8 mm 턱에 평평하게 앉습니다.</p><div class="opts">' +
+      ? '<h2>' + N + '셀 넣기</h2><p>막면을 아래로 해 핀 12개 위에 놓습니다(교수님 “핀은 모두 bottom”). 자른 모서리를 포켓 키에 맞추면 유리가 0.8 mm 턱에 평평하게 앉습니다.</p><div class="opts">' +
         opt('cell', 'down', '막면 아래 · 자른 모서리 맞춤') + opt('cell', 'up', '막면 위로 (뒤집힘)') + '</div>'
-      : '<h2>3. 포켓에 넣기</h2><p>마스크 쌍에 끼운 웨이퍼를 PVK 쪽을 위로, 자른 모서리를 키에 맞춰 아래 프레임 포켓에 넣습니다. 뒷핀 4개가 아래 마스크 구멍을 지나 뒷면 패드에 닿습니다.</p><div class="opts">' +
+      : '<h2>' + N + '포켓에 넣기</h2><p>마스크 쌍에 끼운 웨이퍼를 PVK 쪽을 위로, 자른 모서리를 키에 맞춰 아래 프레임 포켓에 넣습니다. 뒷핀 4개가 아래 마스크 구멍을 지나 뒷면 패드에 닿습니다.' +
+        (t3 ? ' 3T: 키(+x+y)를 맞추면 닦은 창과 mid 패드가 그 대각 반대 (−x,−y), TT3의 M 핀 바로 아래에 옵니다.' : '') + '</p><div class="opts">' +
         opt('cell', 'up', 'PVK 위 · 모서리 키 맞춤') + opt('cell', 'flip', '뒤집힘 (Si 쪽이 위)') + '</div>';
     case 'mask': return si
-      ? '<h2>3. 마스크와 누름 링</h2><p>0.1 mm 마스크(2.5 × 2.5 mm 구멍 4개 = 화소당 0.0625 cm²)를 유리 위에 놓고, 1.1T 유리면 누름 링을 얹습니다. 링이 있어야 뚜껑이 유리를 누릅니다.</p><p class="label">마스크</p><div class="opts">' +
+      ? '<h2>' + N + '마스크와 누름 링</h2><p>0.1 mm 마스크(2.5 × 2.5 mm 구멍 4개 = 화소당 0.0625 cm²)를 유리 위에 놓고, 1.1T 유리면 누름 링을 얹습니다. 링이 있어야 뚜껑이 유리를 누릅니다.</p><p class="label">마스크</p><div class="opts">' +
         opt('mask', 'ok', '구멍을 화소에 맞춤') + opt('mask', 'shift', '1.5 mm 어긋남') + opt('mask', 'none', '빼먹음') + '</div><p class="label">누름 링</p><div class="opts">' +
         opt('ring', 'in', '넣음 (1.1T)') + opt('ring', 'out', '빼먹음') + '</div>'
-      : '<h2>2. KIER 마스크 쌍에 웨이퍼 끼우기</h2><p>앞뒤 마스크(1 × 1 cm 창 + 핀 구멍 4개, ±6.45 mm)를 캡톤으로 붙인 쌍 사이에 웨이퍼를 넣습니다. 구멍 4개가 Ag 패드 4개(±6.43, Ø1.6) 위에 와야 합니다.</p><div class="opts">' +
-        opt('mask', 'ok', '구멍 4개 = 패드 4개') + opt('mask', 'rot', '마스크 쌍이 돌아감') + opt('mask', 'none', '마스크 없이') + '</div>';
-    case 'lid': return '<h2>4. 뚜껑 닫기</h2><p>힌지 뚜껑을 내리면 +x 쪽 자석 걸쇠가 “딸깍” 붙습니다. 걸쇠 힘 13 N이 핀 12개(약 5 N)를 이깁니다. 3D에서 뚜껑을 눌러도 됩니다.</p><div class="opts">' +
+      : '<h2>' + N + 'KIER 마스크 쌍에 웨이퍼 끼우기</h2><p>앞뒤 마스크(1 × 1 cm 창 + 핀 구멍 4개, ±6.45 mm)를 캡톤으로 붙인 쌍 사이에 웨이퍼를 넣습니다. 구멍 4개가 Ag 패드 4개(±6.43, Ø1.6) 위에 와야 합니다.' +
+        (t3 ? ' 3T 앞 마스크에는 mid 패드 자리 (−10.4, −8.6)·(−8.6, −10.4)에 Ø2.0 구멍 2개가 더 있습니다.' : '') + '</p><div class="opts">' +
+        opt('mask', 'ok', t3 ? '구멍 4 + 2 = 패드 4 + 2' : '구멍 4개 = 패드 4개') + opt('mask', 'rot', '마스크 쌍이 돌아감') + opt('mask', 'none', '마스크 없이') + '</div>';
+    case 'lid': return '<h2>' + N + '뚜껑 닫기</h2><p>힌지 뚜껑을 내리면 +x 쪽 자석 걸쇠가 “딸깍” 붙습니다. 걸쇠 힘 13 N이 핀 12개(약 5 N)를 이깁니다. 3D에서 뚜껑을 눌러도 됩니다.</p><div class="opts">' +
       opt('lid', 'closed', '딸깍 닫기') + opt('lid', 'half', '덜 닫힘 (걸쇠 안 걸림)') + opt('lid', 'open', '열기') + '</div>';
     case 'knob': {
       const pf = J.pinForces(st), row = (k) => { const t = st.knobs[k];
         return '<div class="knob"><button class="btn ghost" data-knob="' + k + '" data-d="-0.5">−½</button><div><b>노브 ' + (k + 1) + '</b> <span class="mono">' + (t < 0 ? '핀 닿기 전 (' + f(-t, 1) + '바퀴 남음)' : f(t, 1) + ' / 1.8바퀴') + '</span>' +
           '<div class="meter"><i style="width:' + Math.max(0, Math.min(100, t / 1.8 * 100)) + '%"></i></div></div><button class="btn" data-knob="' + k + '" data-d="0.5">+½</button></div>'; };
       const fp = pf.Fpin || {};
-      return '<h2>4. 노브 두 개 조이기</h2><p>노브(NOOSF3-14, M3)가 윗판 PCB를 기둥 멈춤까지 끌어내립니다. 핀이 닿은 뒤 1.8바퀴, ½바퀴에 핀당 약 0.09 N. 두 노브를 번갈아 조입니다. 3D에서 노브를 눌러도 ½바퀴씩 돕니다.</p>' + row(0) + row(1) +
+      return '<h2>' + N + '노브 두 개 조이기</h2><p>노브(NOOSF3-14, M3)가 윗판 PCB를 기둥 멈춤까지 끌어내립니다. 핀이 닿은 뒤 1.8바퀴, ½바퀴에 핀당 약 0.09 N. 두 노브를 번갈아 조입니다. 3D에서 노브를 눌러도 ½바퀴씩 돕니다.</p>' + row(0) + row(1) +
         '<p class="mono">핀 힘 (N): NE ' + f(fp.ne, 2) + ' · NW ' + f(fp.nw, 2) + ' · SE ' + f(fp.se, 2) + ' · SW ' + f(fp.sw, 2) + ' (멈춤에서 ' + f(J.PIN_F_STOP + 0.05, 2) + ', 마스크 두께 포함)</p>';
     }
     case 'wire': {
@@ -372,14 +443,24 @@ function cardHTML(id) {
         Object.entries(LEADS[track]).map(([v, t]) => '<option value="' + v + '"' + (st.jacks[key] === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>';
       const jacks = '<p class="label">키슬리 2400 앞면 (빨강 HI·SENSE HI, 검정 LO·SENSE LO)</p><div class="grid2">' + JACKS.map(([k, l]) => sel(k, l)).join('') + '</div>';
       return si
-        ? '<h2>5. 선 연결</h2><p>지그 DB15 → 스위치 박스. 지그에는 스위치가 없고, 박스의 4단 2극 로터리가 화소의 F·S를 같이 고릅니다. 박스 출력 4개를 키슬리에 꽂습니다(ITO = +, 화소 Ag = −).</p><div class="opts">' +
+        ? '<h2>' + N + '선 연결</h2><p>지그 DB15 → 스위치 박스. 지그에는 스위치가 없고, 박스의 4단 2극 로터리가 화소의 F·S를 같이 고릅니다. 박스 출력 4개를 키슬리에 꽂습니다(ITO = +, 화소 Ag = −).</p><div class="opts">' +
           '<button class="opt" data-toggle="db15" aria-pressed="' + st.db15 + '">' + (st.db15 ? 'DB15 꽂음 (잭나사 조임)' : 'DB15 꽂기') + '</button></div><p class="label">로터리 (화소)</p><div class="opts">' +
           [0, 1, 2, 3, 4].map((p) => '<button class="opt" data-rot="' + p + '" aria-pressed="' + (st.rotary === p) + '">' + (p ? 'P' + p : 'OFF') + '</button>').join('') + '</div>' + jacks
-        : '<h2>5. 선 연결 (SMA–BNC ×4)</h2><p>윗판 SMA F+·S+, 아랫판 SMA F−·S−를 SMA–BNC 케이블과 BNC–바나나로 키슬리에 꽂습니다. F+→HI, S+→SENSE HI, F−→LO, S−→SENSE LO.</p>' + jacks;
+        : '<h2>' + N + (t3 ? 'T–B 선 연결 (SMA–BNC ×4, 2T와 같음)' : '선 연결 (SMA–BNC ×4)') + '</h2><p>윗판 SMA F+·S+, 아랫판 SMA F−·S−를 SMA–BNC 케이블과 BNC–바나나로 키슬리에 꽂습니다. F+→HI, S+→SENSE HI, F−→LO, S−→SENSE LO.' +
+          (t3 ? ' <b>M-F·M-S(−y 변)는 여기 꽂지 않습니다</b> — 다음 단계에서 전압계로.' : '') + '</p>' + jacks;
+    }
+    case 'mid': {
+      const m = st.mid;
+      return '<h2>' + N + '3T: M-F·M-S 연결 (윗판 −y 변 SMA)</h2><p>T–B는 2T 그대로입니다. M은 재결합 ITO(25 nm)에 댄 <b>전압 프로브</b>: T–M = V<sub>PVK</sub>를 전류 0의 고임피던스로 읽습니다(SMU 전압 읽기 모드 또는 DMM). ITO 면저항·접촉 저항은 전류가 없으니 값에 들어오지 않습니다.</p>' +
+        '<p class="label">창 (장착 전에 닦음)</p><div class="opts">' + opt('mid.window', 'ok', '키 대각 반대 (−x,−y)에 창 4.4 mm') + opt('mid.window', 'key', '키 모서리 (+x,+y)를 닦음') + '</div>' +
+        '<p class="label">mid 핀 아래</p><div class="opts">' + opt('mid.pad', 'ag', 'Ag mid 패드 Ø1.6') + opt('mid.pad', 'paste', 'Ag 페이스트 점') + opt('mid.pad', 'bare', '맨 ITO') + '</div>' +
+        '<p class="label">M-F·M-S를 어디에</p><div class="opts">' + opt('mid.mode', 'probe', 'T–M 전압 읽기: 2번 SMU/DMM, 고임피던스 (I ≈ 0)') + opt('mid.mode', 'si', 'M–B Si Jsc: 소면적 조명 (2 × 2 mm)만') + opt('mid.mode', 'drive', 'M–B 전면적 Jsc (SMU 전류 구동)') + '</div>' +
+        '<label class="check"><input type="checkbox" data-midchk' + (m.chain ? ' checked' : '') + '> 멀티미터 사슬 점검: M-F ↔ M-S 수십 Ω (ITO) · M ↔ F+ (위 패드) 단락 아님 · M ↔ F− (아래) 열림 (다이오드 값만)</label>' +
+        '<p class="note">규칙: <b>M에는 전면적으로 전류를 흘리지 않는다.</b> 1 cm² 가운데에서 모서리 패드까지 ITO 약 70–290 Ω(가정) → 20 mA면 가로 전압강하 1.4–5.8 V.</p>';
     }
     case 'pc': {
       const p = st.pc, inp = (k, l, step) => '<label class="field">' + l + '<input type="number" inputmode="decimal" step="' + step + '" data-pc="' + k + '" value="' + esc(p[k]) + '"></label>';
-      return '<h2>6. PC: 연결과 스윕 설정</h2><p>값은 지난 사람이 쓴 그대로입니다. 이 시료에 맞게 고칩니다: 끝 전압은 Voc보다 조금 위, compliance는 단락 전류보다 넉넉히, 면적은 <b>마스크 구멍</b> 면적.</p>' +
+      return '<h2>' + N + 'PC: 연결과 스윕 설정</h2><p>값은 지난 사람이 쓴 그대로입니다. 이 시료에 맞게 고칩니다: 끝 전압은 Voc보다 조금 위, compliance는 단락 전류보다 넉넉히, 면적은 <b>마스크 구멍</b> 면적.</p>' +
         '<div class="opts"><button class="opt" data-connect aria-pressed="' + p.connected + '">' + (p.connected ? '연결됨: KEITHLEY 2400 (GPIB 24)' : 'GPIB 연결') + '</button></div>' +
         '<label class="check"><input type="checkbox" data-pcchk="fourWire"' + (p.fourWire ? ' checked' : '') + '> 4선 (원격 감지, SENSE 단자)</label>' +
         '<div class="grid2">' + inp('vStart', '시작 V', '0.01') + inp('vStop', '끝 V', '0.01') + inp('step', '간격 V', '0.005') + inp('delay', '지연 ms', '10') +
@@ -388,13 +469,13 @@ function cardHTML(id) {
     }
     case 'light': {
       const L = st.light;
-      return '<h2>7. 빛과 기준 셀</h2><p>램프를 켜고 셔터를 엽니다. 기준 셀로 1 sun을 확인하고, 다르면 램프 출력을 고쳐 다시 잽니다. 지그의 포토다이오드는 상대 변화만 기록합니다(절대 조도계 아님).</p><div class="opts">' +
+      return '<h2>' + N + '빛과 기준 셀</h2><p>램프를 켜고 셔터를 엽니다. 기준 셀로 1 sun을 확인하고, 다르면 램프 출력을 고쳐 다시 잽니다. 지그의 포토다이오드는 상대 변화만 기록합니다(절대 조도계 아님).</p><div class="opts">' +
         '<button class="opt" data-toggle="light.lamp" aria-pressed="' + L.lamp + '">' + (L.lamp ? '램프 켜짐' : '램프 켜기') + '</button>' +
         '<button class="opt" data-toggle="light.shutter" aria-pressed="' + L.shutter + '">' + (L.shutter ? '셔터 열림' : '셔터 열기') + '</button></div>' +
         '<label class="field">램프 출력 <input type="range" min="0.85" max="1.10" step="0.01" data-level value="' + L.level + '"></label>' +
         '<div class="opts"><button class="btn ghost" data-ref>기준 셀 재기</button></div><p class="mono" id="refout">' + refText() + '</p>';
     }
-    case 'run': return '<h2>8. J–V 재기</h2><p>역방향(Voc → Jsc) 다음 순방향으로 쓸고 Voc·Jsc·FF·PCE를 뽑습니다. 아래에 무엇 때문에 그런 곡선이 나왔는지 나옵니다.</p><div class="opts"><button class="btn" data-run>J–V 재기</button></div>';
+    case 'run': return '<h2>' + N + 'J–V 재기</h2><p>역방향(Voc → Jsc) 다음 순방향으로 쓸고 Voc·Jsc·FF·PCE를 뽑습니다. 아래에 무엇 때문에 그런 곡선이 나왔는지 나옵니다.' + (t3 ? ' 3T는 같은 스윕에서 T–M(V<sub>PVK</sub>) 읽기도 같이 나옵니다.' : '') + '</p><div class="opts"><button class="btn" data-run>J–V 재기</button></div>';
   }
 }
 function refText() {
@@ -415,7 +496,7 @@ function changed() { if (st.light.refRead != null && !(st.light.lamp && st.light
 // ---- events
 document.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
-  if (b.id === 'tr-single' || b.id === 'tr-tandem') return setTrack(b.id.slice(3));
+  if (/^tr-(single|tandem|tandem3t)$/.test(b.id)) return setTrack(b.id.slice(3));
   if (b.dataset.step != null) return go(+b.dataset.step);
   if (b.id === 'prev') return go(cur - 1);
   if (b.id === 'next') return go(cur + 1);
@@ -430,7 +511,8 @@ document.addEventListener('click', (e) => {
 });
 document.addEventListener('change', (e) => {
   const t = e.target;
-  if (t.dataset.jack) { st.jacks[t.dataset.jack] = t.value; changed(); }
+  if (t.dataset.jack) { st.jacks[t.dataset.jack] = t.value; changed(); if (/^M-/.test(t.value)) toast('M 선을 2400 루프에? 셀 전류가 ITO를 지난다 — M은 전압 읽기 전용.'); }
+  else if (t.hasAttribute('data-midchk')) { st.mid.chain = t.checked; changed(); }
   else if (t.dataset.pcchk) { st.pc[t.dataset.pcchk] = t.checked; changed(); }
   else if (t.dataset.pcsel) { st.pc[t.dataset.pcsel] = t.value; changed(); }
 });
@@ -447,7 +529,7 @@ function turn(k, d) {
 }
 function setTrack(t) {
   track = t; st = S[t]; cur = 0;
-  $('tr-single').setAttribute('aria-pressed', String(t === 'single')); $('tr-tandem').setAttribute('aria-pressed', String(t === 'tandem'));
+  for (const k of Object.keys(GLB)) $('tr-' + k).setAttribute('aria-pressed', String(t === k));
   build3D(); render(); showResult(); view('jig', true);
 }
 let toastT = 0;
@@ -465,13 +547,20 @@ function showResult() {
   const L = last[track], box = $('result');
   if (!L) { box.hidden = true; return; }
   box.hidden = false;
-  if (L.err) { $('chart').innerHTML = ''; $('tbl').innerHTML = ''; $('msgs').className = 'msgs bad'; $('msgs').innerHTML = '<li>' + esc(L.err) + '</li>'; return; }
+  if (L.err) { $('chart').innerHTML = ''; $('tbl').innerHTML = ''; $('vmid').hidden = true; $('msgs').className = 'msgs bad'; $('msgs').innerHTML = '<li>' + esc(L.err) + '</li>'; return; }
   const res = L.res, ref = J.simulate(J.correctState(track)).scans[0], T = J.TRACKS[track].target;
   $('chart').innerHTML = chart(res.scans, ref, L.state.pc);
   const row = (name, x) => '<tr><td>' + name + '</td><td>' + f(x.Voc, 3) + '</td><td>' + f(x.Jsc, 2) + '</td><td>' + (x.FF == null ? '–' : f(x.FF * 100, 1)) + '</td><td>' + f(x.PCE, 2) + '</td></tr>';
   $('tbl').innerHTML = '<tr><th></th><th>Voc (V)</th><th>Jsc (mA/cm²)</th><th>FF (%)</th><th>PCE (%)</th></tr>' +
     res.scans.map((s) => row(s.dir === 'rev' ? '역방향' : '순방향', s.fig)).join('') + row('예시 기준', ref.fig);
-  const good = L.msgs.length === 1 && /제대로/.test(L.msgs[0]);
+  const M = res.mid, vm = $('vmid');
+  if (M && L.state.mid.mode) {
+    const r = (x) => (x.Vread == null ? '–' : f(x.Vread, 2));
+    vm.hidden = false;
+    vm.textContent = 'T–M 읽기 (역방향, ' + (L.state.mid.mode === 'probe' ? 'I ≈ 0' : L.state.mid.mode === 'drive' ? 'M에 전류 — 가로 강하 포함' : '소면적 모드') + '): Voc점 ' + r(M.atVoc) + ' V · MPP ' + r(M.atMpp) + ' V · Jsc점 ' + r(M.atJsc) + ' V' +
+      ' · V_Si = V − V_PVK: Voc점 ' + f(M.atVoc.Vsi, 2) + ' V · MPP ' + f(M.atMpp.Vsi, 2) + ' V (예시: 서브셀 다이오드 가정)';
+  } else vm.hidden = true;
+  const good = L.msgs.length >= 1 && /제대로/.test(L.msgs[0]);
   $('msgs').className = 'msgs ' + (good ? 'ok' : 'bad'); $('msgs').innerHTML = L.msgs.map((m) => '<li>' + esc(m) + '</li>').join('');
 }
 function chart(scans, ref, pc) {
@@ -536,6 +625,12 @@ const rotKnob = new THREE.Group(); rotKnob.position.set(0, 120, BZ + 45); swbox.
 rotKnob.add(cyl(11, 10, 0x222222, 0, 0, 5)); rotKnob.add(box(3, 12, 2, 0xf2f2f2, 0, 5, 11));
 const SWOUT = { 'F+': [-36, 150, BZ + 20], 'S+': [-12, 150, BZ + 20], 'F-': [12, 150, BZ + 20], 'S-': [36, 150, BZ + 20] };
 for (const [k, p] of Object.entries(SWOUT)) swbox.add(cyl(4, 6, k[1] === '+' ? 0xc0262d : 0x111111, p[0], p[1] + 2, p[2]));
+// 3T: a second meter (SMU in voltage mode / DMM) for the T–M probe, left of the Keithley; drawn only on the 3T track
+const dmm = new THREE.Group(); props.add(dmm); dmm.visible = false;
+const D = { x: -40, y: 330, front: 300 };
+dmm.add(box(120, 60, 50, 0x4a4f55, D.x, D.y, BZ + 25)); dmm.add(box(70, 2, 18, 0x18301f, D.x - 15, D.front - 1, BZ + 34, { emissive: 0x0d2a16 }));
+const DMMPOS = { 'M-F': [D.x + 30, D.front - 2, BZ + 16], 'M-S': [D.x + 48, D.front - 2, BZ + 16] };
+for (const [k, p] of Object.entries(DMMPOS)) dmm.add(cyl(4, 6, k === 'M-F' ? 0xd08a1e : 0x111111, p[0], p[1], p[2]));
 const cables = new THREE.Group(); world.add(cables);
 
 // the jig of the current track
@@ -551,7 +646,7 @@ function parseGLB(key, cb) {
 function build3D() {
   if (jig) { world.remove(jig.root); jig = null; }
   picks.length = 0;
-  const key = track === 'single' ? 'single_prod' : 'tandem_prod';
+  const key = GLB[track];
   $('status').hidden = false;
   parseGLB(key, (gltf) => {
     const src = gltf.scene.clone(true), root = new THREE.Group(); world.add(root);
@@ -573,26 +668,32 @@ function build3D() {
         transparent: /sample: ITO glass|Si wafer/.test(n), opacity: /sample: ITO glass/.test(n) ? 0.55 : 1 });
       let g = body;
       if (/^station plate|^groove rod|station side/.test(n)) g = station;
-      else if (/^sample/.test(n)) g = sample;
+      else if (/^sample|^KIER measurement mask|^Kapton tape|^3T mid window/.test(n)) g = sample;
       else if (/^aperture mask/.test(n)) g = maskG;
       else if (/^press ring/.test(n)) g = ringG;
       else if (/^hinged lid|^hinge pin|\(lid,/.test(n)) g = lid;
       else if (/^knob 1/.test(n)) g = knobs[0];
       else if (/^knob 2/.test(n)) g = knobs[1];
-      else if (/^top PCB|^front pin|SMA edge jack [FS]\+/.test(n)) g = top;
+      else if (/^top PCB|^front pin|SMA edge jack [FS]\+|SMA edge jack M-[FS]/.test(n)) g = top;
       g.attach(o);
       if (/^knob|^hinged lid/.test(n)) { o.userData.pick = /^knob 1/.test(n) ? 'k0' : /^knob 2/.test(n) ? 'k1' : 'lid'; picks.push(o); }
     }
     root.remove(src);
-    if (track === 'tandem') {   // KIER mask pair (not in the CAD): 25 mm steel, 1 x 1 cm window, holes at ±6.45
-      const shp = new THREE.Shape(); shp.moveTo(-12.5, -12.5); shp.lineTo(12.5, -12.5); shp.lineTo(12.5, 12.5); shp.lineTo(-12.5, 12.5); shp.lineTo(-12.5, -12.5);
-      const hole = (cx, cy, r) => { const h = new THREE.Path(); h.absarc(cx, cy, r, 0, Math.PI * 2, true); shp.holes.push(h); };
-      const w = new THREE.Path(); w.moveTo(-5, -5); w.lineTo(-5, 5); w.lineTo(5, 5); w.lineTo(5, -5); w.lineTo(-5, -5); shp.holes.push(w);
-      for (const sx of [-1, 1]) for (const sy of [-1, 1]) hole(sx * 6.45, sy * 6.45, 1.15);
-      const geo = new THREE.ExtrudeGeometry(shp, { depth: 0.12, bevelEnabled: false, curveSegments: 16 });
-      const mm = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, metalness: 0.7, roughness: 0.35 });
-      const front = new THREE.Mesh(geo, mm); front.position.z = 0.14; const rear = new THREE.Mesh(geo, mm); rear.position.z = -0.27;
-      const pair = new THREE.Group(); pair.add(front); pair.add(rear); sample.add(pair); jig_pair = pair;
+    if (track !== 'single') {   // KIER mask pair: the CAD masks when the GLB has them (production models), else drawn here: 25 mm steel, 1 x 1 cm window, holes at ±6.45
+      const pair = new THREE.Group(); sample.add(pair);
+      const glbMasks = sample.children.filter((o) => o.isMesh && /^KIER measurement mask|^Kapton tape/.test(o.name.replace(/_/g, ' ')));
+      if (glbMasks.length) glbMasks.forEach((o) => pair.attach(o));
+      else {
+        const shp = new THREE.Shape(); shp.moveTo(-12.5, -12.5); shp.lineTo(12.5, -12.5); shp.lineTo(12.5, 12.5); shp.lineTo(-12.5, 12.5); shp.lineTo(-12.5, -12.5);
+        const hole = (cx, cy, r) => { const h = new THREE.Path(); h.absarc(cx, cy, r, 0, Math.PI * 2, true); shp.holes.push(h); };
+        const w = new THREE.Path(); w.moveTo(-5, -5); w.lineTo(-5, 5); w.lineTo(5, 5); w.lineTo(5, -5); w.lineTo(-5, -5); shp.holes.push(w);
+        for (const sx of [-1, 1]) for (const sy of [-1, 1]) hole(sx * 6.45, sy * 6.45, 1.15);
+        const geo = new THREE.ExtrudeGeometry(shp, { depth: 0.12, bevelEnabled: false, curveSegments: 16 });
+        const mm = new THREE.MeshStandardMaterial({ color: 0xb8bcc2, metalness: 0.7, roughness: 0.35 });
+        const front = new THREE.Mesh(geo, mm); front.position.z = 0.14; const rear = new THREE.Mesh(geo, mm); rear.position.z = -0.27;
+        pair.add(front); pair.add(rear);
+      }
+      jig_pair = pair;
     }
     jig = { root, station, body, sample, maskG, ringG, lid, top, knobs };
     $('status').hidden = true; applyTheme(); update3D(true);
@@ -609,8 +710,9 @@ function update3D(instant) {
   const s = st, A = anim;
   A.bodyZ = s.station == null ? 45 : s.station === 'tilt' ? 2.5 : 0; A.bodyX = s.station == null ? -70 : 0; A.bodyTilt = s.station === 'tilt' ? 0.05 : 0;
   A.sampleZ = s.cell == null ? 40 : 0; A.sampleFlip = (s.cell === 'up' && track === 'single') || s.cell === 'flip' ? Math.PI : 0;
-  jig.sample.visible = s.cell != null || (track === 'tandem' && s.mask != null);
-  if (track === 'tandem') { A.sampleZ = s.cell == null ? (s.mask != null ? 30 : 40) : 0; if (jig_pair) { jig_pair.visible = s.mask !== 'none' && s.mask != null; jig_pair.rotation.z = s.mask === 'rot' ? 0.14 : 0; } }
+  jig.sample.visible = s.cell != null || (track !== 'single' && s.mask != null);
+  if (track !== 'single') { A.sampleZ = s.cell == null ? (s.mask != null ? 30 : 40) : 0; if (jig_pair) { jig_pair.visible = s.mask !== 'none' && s.mask != null; jig_pair.rotation.z = s.mask === 'rot' ? 0.14 : 0; } }
+  dmm.visible = track === 'tandem3t';
   jig.maskG.visible = track === 'single' && s.mask != null && s.mask !== 'none'; A.maskX = s.mask === 'shift' ? 1.5 : 0;
   jig.ringG.visible = track === 'single' && s.ring === 'in';
   A.lid = s.lid === 'closed' ? 0 : s.lid === 'half' ? -0.16 : -1.85;
@@ -624,13 +726,15 @@ function update3D(instant) {
   while (cables.children.length) { const m = cables.children.pop(); m.geometry.dispose(); }
   if (track === 'single' && s.db15) cable([[0, 43, 6], [0, 60, 8], [0, 80, 10], [0, 90, BZ + 20]], 0x8d959c, 3.2);
   if (s.pc.connected) cable([[-190, 286, BZ + 20], [-120, 400, BZ + 2], [100, 540, BZ + 2], [230, 516, BZ + 40]], 0x2d2d2d, 2.2);
-  const SMA = { 'F+': [-10, 36, 8.3], 'S+': [0, 36, 8.3], 'F-': [-5, 36, -0.8], 'S-': [5, 36, -0.8] };
+  const SMA = { 'F+': [-10, 36, 8.3], 'S+': [0, 36, 8.3], 'F-': [-5, 36, -0.8], 'S-': [5, 36, -0.8], 'M-F': [-10, -36, 8.3], 'M-S': [10, -36, 8.3] };   // M-F / M-S on the TT3 -y edge
+  const toJack = (st0, e, col, r) => { const dy = st0[1] < 0 ? -1 : 1, sOff = track === 'single' ? 12 : 20;
+    cable([[st0[0], st0[1] + 2 * dy, st0[2]], [st0[0], st0[1] + sOff * dy, st0[2] + 3], [(st0[0] + e[0]) / 2, (st0[1] + e[1]) / 2 - 10, BZ + 3], [e[0], e[1] - 20, e[2] - 4], [e[0], e[1] - 3, e[2]]], col, r); };
   for (const [jk, lead] of Object.entries(s.jacks)) {
     if (!lead) continue;
-    const e = JACKPOS[jk], st0 = track === 'single' ? SWOUT[lead] : SMA[lead], col = lead[1] === '+' ? 0xc0262d : 0x161616;
-    const sOff = track === 'single' ? 12 : 20;
-    cable([[st0[0], st0[1] + 2, st0[2]], [st0[0], st0[1] + sOff, st0[2] + 3], [(st0[0] + e[0]) / 2, (st0[1] + e[1]) / 2 - 10, BZ + 3], [e[0], e[1] - 20, e[2] - 4], [e[0], e[1] - 3, e[2]]], col, track === 'single' ? 1.4 : 1.9);
+    const st0 = track === 'single' ? SWOUT[lead] : SMA[lead], col = /^M-/.test(lead) ? 0xd08a1e : lead[1] === '+' ? 0xc0262d : 0x161616;
+    toJack(st0, JACKPOS[jk], col, track === 'single' ? 1.4 : 1.9);
   }
+  if (track === 'tandem3t' && s.mid.mode) for (const [lead, e] of Object.entries(DMMPOS)) toJack(SMA[lead], e, s.mid.mode === 'drive' ? 0xc0262d : 0xd08a1e, 1.9);   // M pair -> voltmeter (red = current forced through M: not allowed)
   if (instant) for (const k in A) curA[k] = A[k];
 }
 const curA = {};
@@ -665,7 +769,9 @@ const LABELS = [
   ['S HI', () => cad(...JACKPOS.SHI).add(new THREE.Vector3(0, 9, 0)), () => true], ['S LO', () => cad(...JACKPOS.SLO).add(new THREE.Vector3(0, 9, 0)), () => true],
   ['스위치 박스', () => cad(0, 120, BZ + 70), () => track === 'single'],
   ['램프', () => cad(0, 0, 385), () => true], ['PC', () => cad(-190, 260, BZ + 175), () => true], ['기준 셀', () => cad(-90, -20, BZ + 18), () => true],
-  ['노브 1', () => cad(18, 18, 22), () => track === 'tandem'], ['노브 2', () => cad(-18, -18, 22), () => track === 'tandem'],
+  ['노브 1', () => cad(18, 18, 22), () => track !== 'single'], ['노브 2', () => cad(-18, -18, 22), () => track !== 'single'],
+  ['전압계 (T–M = V_PVK, I ≈ 0)', () => cad(D.x, D.front - 5, BZ + 62), () => track === 'tandem3t'],
+  ['M-F·M-S (−y)', () => cad(0, -40, 14), () => track === 'tandem3t'],
 ];
 const labelEls = LABELS.map(([t]) => { const el = document.createElement('div'); el.className = 'tagl'; el.textContent = t; $('labels').appendChild(el); return el; });
 // picking

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>지그 조립 연습</title>
-<meta name="description" content="싱글·탠덤 제작판 측정 지그를 CAD 순서대로 3D에서 조립해 보는 연습: 납땜, 점검, 나사, 부품 조립">
+<meta name="description" content="싱글·탠덤·탠덤 3T 제작판 측정 지그를 CAD 순서대로 3D에서 조립해 보는 연습: 납땜, 점검, 나사, 부품 조립, 3T 창 닦기와 mid 핀">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -36,7 +36,7 @@ a { color: var(--accent); }
 .back { font-size: 12.5px; font-weight: 600; text-decoration: none; }
 h1 { font-size: 19px; font-weight: 700; margin: 2px 0 0; letter-spacing: -0.01em; }
 .sub { color: var(--muted); font-size: 12.5px; margin: 2px 0 0; }
-.seg2 { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg2 { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg2 button { font: inherit; font-size: 13px; padding: 8px 4px; border: 0; background: transparent; color: var(--fg); cursor: pointer; }
 .seg2 button + button { border-left: 1px solid var(--line); }
 .seg2 button[aria-pressed="true"] { background: var(--accent); color: #fff; font-weight: 600; }
@@ -120,6 +120,7 @@ details summary { cursor: pointer; font-size: 13px; font-weight: 600; }
     <div class="seg2" role="group" aria-label="지그 고르기">
       <button id="tr-single" type="button" aria-pressed="true">제작 싱글</button>
       <button id="tr-tandem" type="button" aria-pressed="false">제작 탠덤</button>
+      <button id="tr-tandem3t" type="button" aria-pressed="false">탠덤 3T</button>
     </div>
     <div><div class="bar" id="bar"></div><div class="meta" id="meta"></div></div>
     <section class="card" id="card" aria-live="polite"></section>

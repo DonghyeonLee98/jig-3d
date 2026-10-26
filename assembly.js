@@ -1,6 +1,7 @@
 /* 지그 조립 연습 (assembly.html), 2026-10-23
- * 제작 싱글 = single_prod, 제작 탠덤 = tandem_prod in jig_models.js (CAD GLB, one mesh per part, mm, z up).
- * The step lists SINGLE_STEPS / TANDEM_STEPS are plain data: edit them to change the order or the words.
+ * 제작 싱글 = single_prod, 제작 탠덤 = tandem_prod, 탠덤 3T = tandem_prod_3t in jig_models.js (CAD GLB, one mesh per part, mm, z up).
+ * The step lists SINGLE_STEPS / TANDEM_STEPS / TANDEM3T_STEPS are plain data: edit them to change the order or the words
+ * (TANDEM3T_STEPS = a copy of TANDEM_STEPS with the TT3 top board, the mid pins / SMAs and the 3T sample-preparation steps).
  *   step  = { id, phase, title, say, tip?, tool, focus, view, enter?, optional?, tasks: [...] }
  *   tasks = { t: 'kit',   rows: [{ label, qty, parts }] }                       tick the parts list
  *           { t: 'pick',  items, decoys?, target?, rule?, ordered?, after? }    pick from the tray (decoys answer with a hint)
@@ -390,6 +391,101 @@
         { label: 'FFC 2 ↔ 1 플러그 NTC', part: T.bead, ref: T.ffc, read: '≈ 10 kΩ (25 °C)', needs: T.plug }] }] },
   ];
 
+  // ============================================================ steps: 탠덤 3T (TT3 + mid 단자, 10/25 설계)
+  // Same jig as 제작 탠덤 except the top board (TT3: two mid pins M-F / M-S on the (-x,-y) corner, two SMA jacks on the -y edge)
+  // and the front masks (two more holes). The sample gets a 4.4 mm window (top-cell stack removed -> recombination ITO) with two Ag mid pads.
+  const T3 = Object.assign({}, T, {
+    tt: 'top PCB TT3, cross window + 3T, production (FR4 1.6 ENIG black, front pins F+/S+ at ±6.45, mid pins M-F/M-S on the (-x,-y) corner, SMA F+/S+ on +y and M-F/M-S on -y; pcb_kicad/TT3)',
+    mpin: { MF: PF + 'M-F 3T (-10.40,-8.60)', MS: PF + 'M-S 3T (-8.60,-10.40)' },
+    smaMF: 'SMA edge jack M-F Samtec SMA-J-P-H-ST-EM1 (top PCB TT3, -y edge)', smaMS: 'SMA edge jack M-S Samtec SMA-J-P-H-ST-EM1 (top PCB TT3, -y edge)',
+    wafer: 'sample: KIER tandem 25 x 25 x 0.50 (thickness: user photo 10/23, about 0.3-0.5) between the two measurement masks',
+    mgf2: 'sample: MgF2 ARC d19.9, open over the four pads (KIER mask, 박수아 10/23)',
+    izo: 'sample: IZO 12.7 x 12.7 + corner discs d2.0 (KIER mask, 박수아 10/23); 1 x 1 cm measured through the KIER aperture mask',
+    ag: 'sample: front Ag = frame + 3 split fingers + pads d1.6 at ±6.43 (KIER mask, 박수아 10/23); rear pads ASSUMED at ±6.45; 3T mid pads d1.6 at (-10.4,-8.6) / (-8.6,-10.4)',
+    win: '3T mid window 4.4 x 4.4 at (-9.6,-9.6): top-cell stack removed, recombination ITO exposed (ASSUMED ITO)',
+    maskR: 'KIER measurement mask, rear (under the wafer): stainless 24.5 mm square, 0.1 mm (ASSUMED), 1 x 1 cm window, d2.3 pin holes at ±6.45',
+    maskF: 'KIER measurement mask, front (on the wafer): stainless 24.5 mm square, 0.1 mm (ASSUMED), 1 x 1 cm window, 2 mid holes d2 (3T), d2.3 pin holes at ±6.45',
+    kapton: 'Kapton tape hinge joining the two KIER masks (+x edge, like a book)',
+  });
+  T3.sampleAll = [T3.wafer, T3.mgf2, T3.izo, T3.ag, T3.win, T3.maskR, T3.maskF, T3.kapton];
+  const TANDEM3T_STEPS = (() => {
+    const steps = JSON.parse(JSON.stringify(TANDEM_STEPS).split(JSON.stringify(T.tt)).join(JSON.stringify(T3.tt)));   // deep copy, TT -> TT3
+    const at = (id) => steps.findIndex((s) => s.id === id);
+    const kit = steps[at('t-kit')], rows = kit.tasks[0].rows;
+    kit.say = '탠덤 3T 지그 1대분이다. 2T 탠덤과 같고 윗판만 TT3 (앞 핀 4 + mid 핀 2, SMA 2 + 2). 줄을 누르면 그 부품이 3D에서 빛난다.';
+    rows[2] = { label: '아랫판 TB · 윗판 TT3 (십자 창 + 3T)', qty: '1 · 1', parts: [T.tb, T3.tt] };
+    rows[3] = { label: '스프링 핀 Mill-Max 0906-1 (뒤 4 · 앞 4 · mid 2)', qty: '10', parts: [...Object.values(T.rpin), ...Object.values(T.fpin), ...Object.values(T3.mpin)] };
+    rows[4] = { label: 'SMA 엣지 잭 Samtec SMA-J-P-H-ST-EM1 (F+·S+·F−·S− + M-F·M-S)', qty: '6', parts: [T.smaFp, T.smaSp, T.smaFm, T.smaSm, T3.smaMF, T3.smaMS] };
+    rows.splice(rows.length - 1, 0,
+      { label: 'KIER 측정 마스크 쌍 (앞판에 3T 구멍 Ø2.0 ×2) + 캡톤 경첩', qty: '1쌍', parts: [T3.maskF, T3.maskR, T3.kapton] },
+      { label: '3T 시료 준비: 닦기 템플릿 (창 4.4) · DMF 면봉 · Ag 페이스트 (mid 패드가 없을 때)', qty: '—', parts: [] });
+    const ttpin = steps[at('t-tt-pin')];
+    ttpin.title = '① 앞면 핀 4개 (±6.45), 플랜지 아래';
+    ttpin.say = '윗판 TT3도 TT와 같다: 핀을 아랫면(플랜지 쪽)에서 끼워 끝이 아래(웨이퍼 앞면)로 가게 하고, 납땜은 윗면에서. 2T 핀 4개를 먼저.';
+    steps.splice(at('t-tt-pin') + 1, 0, {
+      id: 't3-mid-pin', phase: 'TT 납땜', title: '② mid 핀 M-F·M-S 2개, (−x,−y) 모서리', focus: 'TT', view: 'front', tool: 'iron',
+      say: '같은 0906-1을 (−10.4, −8.6)·(−8.6, −10.4)에, 역시 플랜지 아래·끝 아래. 2T 핀과 3.00 mm 띄어 있고, 웨이퍼 키(+x+y)의 대각 반대 모서리에만 구멍이 있다.',
+      tip: '이 두 핀은 창 안 Ag mid 패드 Ø1.6 (또는 Ag 페이스트 점) 위에 닿는다. 맨 ITO 25 nm에 바로 대면 반복 장착에서 뚫릴 수 있다.',
+      tasks: [
+        { t: 'pick', items: [{ label: 'mid 핀 ×2 · 끝이 아래 · (−x,−y)', parts: Object.values(T3.mpin), layout: 'grid', from: 'bottom', solder: 'top' }],
+          decoys: [
+            { label: 'mid 핀 ×2 · 끝이 위', like: Object.values(T3.mpin), layout: 'grid', flip: true, hint: '거꾸로다. TT3도 플랜지가 아랫면이라 끝이 아래로 가야 패드에 닿는다.' },
+            { label: 'mid 핀 ×2 · 키 모서리 (+x,+y)에', like: Object.values(T3.mpin), layout: 'grid', rotZ: 180, hint: '모서리가 틀렸다. 키(+x+y)는 포켓 맞춤용이고 창·mid 패드·M 핀은 그 대각 반대 (−x,−y)다. TT3에는 거기에만 구멍이 있다.' }] },
+        { t: 'quiz', q: 'mid 핀이 닿는 자리는?', opts: [
+          { t: 'Ag mid 패드 Ø1.6 (또는 Ag 페이스트 점) 위', ok: true },
+          { t: '걷어낸 창의 맨 ITO 위에 바로', hint: '재결합 ITO는 25 nm. 0.72 N 왕관 팁을 반복해서 대면 뚫린다. 패드·페이스트를 쓰고, 직접 대려면 둥근 팁·낮은 하중 핀으로 M1·M2만.' },
+          { t: 'IZO 위 (상부셀 전극)', hint: 'IZO는 T 전극이다. 거기 대면 M = T가 되어 V_PVK가 0 V로 읽힌다. 창 안 ITO 위 패드다.' }] }] });
+    const ttsma = steps[at('t-tt-sma')];
+    ttsma.title = '③ SMA F+·S+ (+y) · M-F·M-S (−y)';
+    ttsma.say = 'F+ x −10, S+ x 0은 +y 변 (TT와 같음). M-F x −10, M-S x +10은 반대쪽 −y 변에 밀어 끼우고 납땜한다. 맞춤핀 (0, −19)과 5.8 mm, 모서리 나사와 1.6 mm 여유.';
+    ttsma.tasks.push({ t: 'pick', items: [{ label: 'SMA M-F (x −10, −y 변)', parts: [T3.smaMF], from: '-y' }, { label: 'SMA M-S (x +10, −y 변)', parts: [T3.smaMS], from: '-y' }],
+      decoys: [{ label: 'SMA M-F·M-S · +y 변에', like: [T3.smaMF, T3.smaMS], rotZ: 180, hint: '+y 변에는 F+·S+가 있고 자리가 없다. M-F·M-S는 −y 변이다.' }] });
+    const dmm = steps[at('t-dmm')];
+    dmm.say = 'SMA 가운데 핀 ↔ 스프링 핀 < 0.5 Ω. F는 NE·SW, S는 NW·SE (위 F+·S+, 아래 F−·S−). 3T: M-F ↔ M1, M-S ↔ M2가 통하고, M이 F+·S+와 붙지 않아야 한다 (F+ 선이 M-F 패드 옆을 우회).';
+    dmm.tasks[0].items.push(
+      { label: 'M-F ↔ M1 (−10.4, −8.6)', part: T3.mpin.MF, ref: T3.smaMF, read: '< 0.5 Ω' },
+      { label: 'M-S ↔ M2 (−8.6, −10.4)', part: T3.mpin.MS, ref: T3.smaMS, read: '< 0.5 Ω' },
+      { label: 'M-F ↔ F+ (우회한 F+ 선, 여유 0.35 mm)', part: T.smaFp, ref: T3.smaMF, read: '열림' },
+      { label: 'M-F ↔ M-S', part: T3.smaMS, ref: T3.smaMF, read: '열림 (시료 위에서만 ITO로 이어짐)' });
+    steps.splice(at('t-spring'), 0,
+      { id: 't3-wipe', phase: '3T 시료 준비', title: '창 닦기: 키의 대각 반대 모서리', focus: 'jig', view: 'top', tool: null,
+        say: '장착 전마다. 웨이퍼의 잘린 모서리(키, +x+y)를 찾고 그 대각 반대 (−x,−y)에 닦기 템플릿(창 4.4 × 4.4, 중심 −9.6, −9.6)을 대고 DMF 면봉으로 상부셀 스택을 걷어내 재결합 ITO를 드러낸다. 창은 IZO 모서리 원판·MgF2 밖, 웨이퍼 가장자리에서 0.7 mm 안쪽.',
+        tip: 'KIER 공정에서 이 단계(DMF 면봉 / 레이저)가 가능한지는 아직 미확인. 창 안에 Ag mid 패드 2개가 있어야 한다 (Ag 마스크에 구멍 추가).',
+        tasks: [
+          { t: 'quiz', q: '어느 모서리를 닦나?', opts: [
+            { t: '키(잘린 모서리, +x+y)의 대각 반대 (−x,−y)', ok: true },
+            { t: '키 모서리 (+x,+y)', hint: '키 모서리는 포켓 맞춤에 쓰고 핀이 없다. TT3의 M 핀은 (−x,−y)에만 있어 거기 창이 없으면 핀이 IZO·MgF2 위에 앉고 T–M이 0 V(단락)로 읽힌다.' },
+            { t: '활성면 가운데 (1 × 1 cm 창 안)', hint: '가운데는 측정 면적이다. 걷어내면 J_sc가 줄고 M이 조명 창 안에 들어온다.' }] },
+          { t: 'quiz', q: '무엇으로, 어디까지?', opts: [
+            { t: 'DMF 면봉, 템플릿 창 4.4 mm 안에서만, ITO가 보일 때까지', ok: true },
+            { t: '면봉으로 넓게, 모서리 전체', hint: '창이 커지면 Ag 모서리 패드(여유 0.57 mm)·IZO 원판(0.49 mm)과 겹쳐 T와 M이 붙는다.' },
+            { t: 'IPA만', hint: 'IPA로는 페로브스카이트·전달층이 안 벗겨진다. DMF (또는 DMSO)로.' }] }] },
+      { id: 't3-sample', phase: '3T 시료 준비', title: '마스크 쌍에 끼워 포켓에 넣기 (창이 −x,−y)', focus: 'jig', view: 'top', tool: 'tweezers',
+        say: '창 뚫린 앞 마스크(Ø2.3 ×4 + Ø2.0 ×2)와 뒤 마스크 사이에 웨이퍼를 끼우고, PVK 위·키를 포켓 키(+x+y)에 맞춰 넣는다. 그러면 창과 mid 패드가 (−x,−y), M 핀 바로 아래에 온다.',
+        tip: '연습이라 윗판을 얹기 전에 넣지만, 실제로는 조립 뒤 측정 때마다 노브를 풀고 넣고 뺀다.',
+        toolWhy: '웨이퍼·마스크는 핀셋으로 가장자리만 잡는다.',
+        tasks: [{ t: 'pick', items: [{ label: '시료 + 마스크 쌍 · 창 (−x,−y)', parts: T3.sampleAll, layout: 'unit' }],
+          decoys: [
+            { label: '시료 + 마스크 쌍 · 창이 키 쪽 (+x,+y)', like: T3.sampleAll, layout: 'unit', rotZ: 180, hint: '180° 돌아갔다. 키가 포켓 키에 안 맞고, 창은 M 핀이 없는 모서리로 간다.' },
+            { label: '시료 뒤집힘 (Si 위)', like: T3.sampleAll, layout: 'unit', flip: true, hint: '뒤집혔다. 앞 핀이 Si 쪽에 닿고 창은 아래를 본다.' }] }] });
+    const tt = steps[at('t-tt')];
+    tt.title = '윗판 TT3 얹기';
+    tt.say = '납땜한 TT3를 핀이 아래로 가게 맞춤핀 MS2-15에 끼워 스프링 위에 얹는다. F+·S+ SMA는 TB와 같은 +y 쪽, M-F·M-S는 −y 쪽. mid 핀 2개가 (−x,−y) 창의 Ag 패드 위에 온다.';
+    tt.tasks[0].items[0].label = 'TT3 (납땜 끝)';
+    const knob = steps[at('t-knob')];
+    knob.say = '윗판 구멍으로 받침 너트에 손으로 돌려 넣는다. 시료가 들어 있으니 핀이 닿고 1.8바퀴 더 돌리면 기둥에 닿아 멈춘다. mid 핀 2개도 같은 윗판이라 같은 힘(0.72 N)으로 패드를 누른다.';
+    const fin = steps[at('t-final')];
+    fin.title = '조립 뒤 다시 재기 (3T 사슬 점검)';
+    fin.say = '시료를 넣은 채로. SMA ↔ 핀, 그리고 3T 사슬: M-F·M-S는 서로 ITO로 이어지고(수십 Ω), 위 패드(F+)와는 붙지 않아야 하며, 아래(F−)로는 Si 다이오드만 보인다. I2C·플러그 NTC는 2T와 같다.';
+    fin.tasks[0].items[2] = { label: 'F+ ↔ F− (시료 있음)', part: T.smaFm, ref: T.smaFp, read: '탠덤 다이오드 값 (단락 아님)' };
+    fin.tasks[0].items.splice(3, 0,
+      { label: 'M-F ↔ 앞 M1 핀', part: T3.mpin.MF, ref: T3.smaMF, read: '< 0.5 Ω' },
+      { label: 'M-F ↔ M-S (패드 2개, ITO 경유)', part: T3.smaMS, ref: T3.smaMF, read: '수십 Ω (ITO 25 nm) · 열림이면 창이 안 닦였거나 패드 없음' },
+      { label: 'M-F ↔ F+ (위 패드)', part: T.smaFp, ref: T3.smaMF, read: '단락 아님 (PVK 다이오드 값) · 0 Ω이면 창이 IZO·Ag에 닿음' },
+      { label: 'M-F ↔ F− (아래)', part: T.smaFm, ref: T3.smaMF, read: '열림 / Si 다이오드 값만 · 단락 아님' });
+    return steps;
+  })();
+
   const CHECK = {
     single: ['받은 PCB: JLC SMD 있음·핀 1 맞음·브리지 없음', '핀 12개가 수직, 아랫면 납땜에 브리지 없음 (확대경)', 'DB15 1–10 ↔ 핀 < 0.5 Ω, 이웃 핀·14 GND는 열림',
       '3V3(15) ↔ GND(14) 단락 없음, SDA(11)·SCL(13) ↔ 3V3 ≈ 4.7 kΩ, PD 12는 빛에 비례', 'Pico I2C 스캔: 0x49 TMP117 · 0x44 SHT45, TMP117 고유 번호를 이름표·기록에',
@@ -412,6 +508,14 @@
       'PCB TT·TB는 10/23 KiCad 판 기준, TB SMD는 JLC 조립 (D2만 손, 아직 주문 전)', '탠덤 더미 기판은 아직 없음 (싱글 더미 D만 있음)',
       '플러그 NTC 리드선 길이·길은 실물에서 정함', '"끝까지 조이면 핀 끝끼리 닿음"은 CAD 계산 (핀 자유 높이 4.5 × 2 = 9.0 > 판 사이 7.7)'],
   };
+  CHECK.tandem3t = CHECK.tandem.concat(['TT3: mid 핀 M1·M2 (−10.4, −8.6) / (−8.6, −10.4) 수직, −y 변 SMA 2개 · M ↔ F+·S+ 열림',
+    '3T 사슬 (시료 있음): M-F ↔ M-S 수십 Ω (ITO), M ↔ 위 패드 단락 아님, M ↔ 아래는 다이오드만',
+    '창은 키의 대각 반대 (−x,−y), 템플릿 4.4 안에서만 · 창 안 Ag mid 패드 2개 (없으면 Ag 페이스트 점)',
+    '맨 ITO에 핀을 바로 대지 않음 (25 nm, 뚫림) · M에 전면적 전류를 흘리지 않음 (가로 전압강하 수 V)']);
+  NOTES.tandem3t = NOTES.tandem.concat(['TT3는 10/25 KiCad 텍스트 편집 판, DRC 0 확인 전 (연구실 KiCad 10)',
+    '재결합 ITO 25 nm (10/26 사용자), 면저항 60–120 Ω/sq는 가정 (Park 2019 Table S3 보간)',
+    'KIER 공정에서 모서리 스택 제거 (DMF / 레이저)·Ag 마스크 구멍 추가 가능 여부 미확인',
+    'mid 패드·창 위치는 10/23 사진 실측 KIER 마스크값 위 계산 (±0.15), 시료 실측 전']);
 
   const TRACKS = {
     single: { key: 'single', glb: 'single_prod', title: '제작 싱글', steps: SINGLE_STEPS,
@@ -421,7 +525,12 @@
       assy: { TB: { board: T.tb, jlc: [T.tmp, T.sht, T.pdF, T.ffc, T.rc], parts: [T.tb, ...Object.values(T.rpin), T.smaFm, T.smaSm, T.tmp, T.sht, T.pdF, T.pdR, T.ffc, T.rc], at: [-88, 0, -3.2] },
         TT: { board: T.tt, parts: [T.tt, ...Object.values(T.fpin), T.smaFp, T.smaSp], at: [88, 0, -11.0], lift: 3.5 } },
       lid: [], knobs: T.knob, springs: T.spring },
+    tandem3t: { key: 'tandem3t', glb: 'tandem_prod_3t', title: '제작 탠덤 3T', steps: TANDEM3T_STEPS,
+      assy: { TB: { board: T.tb, jlc: [T.tmp, T.sht, T.pdF, T.ffc, T.rc], parts: [T.tb, ...Object.values(T.rpin), T.smaFm, T.smaSm, T.tmp, T.sht, T.pdF, T.pdR, T.ffc, T.rc], at: [-88, 0, -3.2] },
+        TT: { board: T3.tt, parts: [T3.tt, ...Object.values(T.fpin), ...Object.values(T3.mpin), T.smaFp, T.smaSp, T3.smaMF, T3.smaMS], at: [88, 0, -11.0], lift: 3.5 } },
+      lid: [], knobs: T.knob, springs: T.spring },
   };
+  const NEXT = { single: 'tandem', tandem: 'tandem3t', tandem3t: 'single' };
   // the 12 single pin positions (s2_pins) for the dummy pads
   const SC_PINS = [[-10.7, 2], [-9.0, 3.6], [-10.7, -2], [-9.0, -3.6], [10.7, 2], [9.0, 3.6], [10.7, -2], [9.0, -3.6], [-4.4, 10], [4.4, 10], [-4.4, -10], [4.4, -10]];
   const SPLIT = [{ re: /^bolt MISUMI SCB3-8 \d \(from below\) \+ nut SLBNR3$/, nut: (z) => z >= 3.39 },
@@ -597,7 +706,7 @@
     m.position.set(0, 0, sign * 1.04);
   }
   function addSolder(p, side) {                     // fillet on the side opposite the flange (S/TB bottom face -1.6, TT top face 9.05)
-    const ttb = tr.parts[T.tt], zf = side === 'top' ? (ttb ? ttb.c.z + ttb.size.z / 2 : 9.3) : -1.6, g = new THREE.CylinderGeometry(side === 'top' ? 0.42 : 0.95, side === 'top' ? 0.95 : 0.42, 0.55, 14);
+    const ttb = tr.parts[(tr.assy.TT || {}).board], zf = side === 'top' ? (ttb ? ttb.c.z + ttb.size.z / 2 : 9.3) : -1.6, g = new THREE.CylinderGeometry(side === 'top' ? 0.42 : 0.95, side === 'top' ? 0.95 : 0.42, 0.55, 14);
     g.rotateX(Math.PI / 2);
     const m = new THREE.Mesh(g, MAT.solder); m.userData.fxChild = true;
     m.position.set(0, 0, zf + (side === 'top' ? 0.275 : -0.275) - p.c.z); p.obj.add(m);
@@ -650,7 +759,7 @@
   function shuffle(a, seed) { const r = seeded(seed), b = a.slice(); for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; } return b; }
   const hash = (s) => { let h = 2166136261; for (const ch of s) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
   function partOf(name) {
-    const m = /^(tandem|single):(.*)$/.exec(name);
+    const m = /^(tandem3t|tandem|single):(.*)$/.exec(name);
     return m ? (TRACKS[m[1]].parts || {})[m[2]] : tr.parts[name];
   }
   function clearView() {
@@ -1061,7 +1170,7 @@
   function validate() {
     const missing = [];
     for (const t of Object.values(TRACKS)) for (const n of namesOf(t)) {
-      const m = /^(tandem|single):(.*)$/.exec(n), tt = m ? TRACKS[m[1]] : t, nm = m ? m[2] : n;
+      const m = /^(tandem3t|tandem|single):(.*)$/.exec(n), tt = m ? TRACKS[m[1]] : t, nm = m ? m[2] : n;
       if (nm.startsWith('@')) { if (!tt.parts[nm]) missing.push(t.key + ': ' + n); continue; }
       const base = nm.replace(/\|(bolt|nut)$/, '');
       if (!tt.raw.has(base) || !tt.parts[nm]) missing.push(t.key + ': ' + n);
@@ -1129,7 +1238,7 @@
   }
   function renderPicks() {
     const task = taskNow();
-    if (tr.st.finished || !task || !view) { ui.picks.innerHTML = tr.st.finished ? `<button class="btn" data-act="other" type="button">${tr.key === 'single' ? '제작 탠덤 해 보기' : '제작 싱글 해 보기'}</button>` : ''; return; }
+    if (tr.st.finished || !task || !view) { ui.picks.innerHTML = tr.st.finished ? `<button class="btn" data-act="other" type="button">${esc(TRACKS[NEXT[tr.key]].title)} 해 보기</button>` : ''; return; }
     let h = '';
     if (task.t === 'kit') {
       h = `<p class="lab">부품 (눌러서 찾기)</p>` + view.entries.map((e, i) => `<button class="pk kit${e.done ? ' done' : ''}" data-kit="${i}" type="button"><span class="n">${e.done ? '✓' : i + 1}</span><span>${esc(e.row.label)}</span><span class="q">${esc(e.row.qty)}</span></button>`).join('') +
@@ -1173,14 +1282,14 @@
     else if (b.dataset.ans) onAnswer(+b.dataset.ans);
     else if (b.dataset.kit) onKit(view.entries[+b.dataset.kit]);
     else if (b.dataset.act === 'kitall') { stopAuto(); startClock(); kitAll(); }
-    else if (b.dataset.act === 'other') showTrack(tr.key === 'single' ? 'tandem' : 'single');
+    else if (b.dataset.act === 'other') showTrack(NEXT[tr.key]);
   });
   ui.auto.addEventListener('click', () => { if (auto.on) stopAuto(); else play(); });
   ui.restart.addEventListener('click', async () => { stopAuto(); await untilIdle(); resetTrack(tr); await enterStep(0); feedback('', '처음부터.'); });
   ui.skip.addEventListener('click', skipStep);
   ui.steps.addEventListener('click', (ev) => { const b = ev.target.closest('[data-step]'); if (b) jumpTo(+b.dataset.step); });
   $('refit').addEventListener('click', () => frame());
-  ['single', 'tandem'].forEach((k) => $('tr-' + k).addEventListener('click', () => showTrack(k)));
+  Object.keys(TRACKS).forEach((k) => $('tr-' + k).addEventListener('click', () => showTrack(k)));
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(); let down = null;
   canvas.addEventListener('pointerdown', (e) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; });
   canvas.addEventListener('pointerup', (e) => {
@@ -1200,7 +1309,7 @@
   async function showTrack(key) {
     stopAuto(); finishTweens(); await untilIdle();
     for (const t of Object.values(TRACKS)) if (t.group) t.group.visible = t.key === key;
-    $('tr-single').setAttribute('aria-pressed', String(key === 'single')); $('tr-tandem').setAttribute('aria-pressed', String(key === 'tandem'));
+    Object.keys(TRACKS).forEach((k) => $('tr-' + k).setAttribute('aria-pressed', String(k === key)));
     if (tr && tr.key !== key && view) clearView();
     tr = TRACKS[key];
     try { history.replaceState(null, '', '#' + key); } catch (e) { /* file:// */ }
@@ -1251,7 +1360,7 @@
   requestAnimationFrame(tick);
   Promise.all(Object.values(TRACKS).map(loadTrack)).then(async () => {
     statusEl.hidden = true;
-    const key = /tandem/.test(location.hash) ? 'tandem' : 'single';
+    const key = /tandem3t/.test(location.hash) ? 'tandem3t' : /tandem/.test(location.hash) ? 'tandem' : 'single';
     await showTrack(key); setTimeout(() => frame(), 400);
     const miss = validate(); if (miss.length) console.warn('[assembly] names not in the GLB:', miss);
   }).catch((err) => { statusEl.textContent = '모델을 읽지 못했습니다. 새로 고침해 보세요.'; console.error(err); });
