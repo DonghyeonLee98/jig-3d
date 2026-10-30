@@ -67,15 +67,18 @@ function calibrate(key) {
 const DEV = { single: calibrate('single'), tandem: calibrate('tandem'), tandem3t: calibrate('tandem3t') };
 
 // ---- the state a practice run is built from
-function defaultState(track) {
+function defaultState(track, bl) {   // bl: beamline cell v3 (10/30); the production state keeps its old keys (its noise seed hashes the state)
+  const s = defaultState0(track); if (bl) { s.bl = true; s.blm = null; } return s;
+}
+function defaultState0(track) {
   return { track, station: null, cell: null, mask: null, ring: null, lid: 'open', knobs: [-1, -1],
     db15: false, rotary: 0, jacks: { HI: '', LO: '', SHI: '', SLO: '' },
     pc: { connected: false, fourWire: false, vStart: -0.1, vStop: 1.3, step: 0.01, delay: 50, dir: 'both', comp: 10, area: '' },
     light: { lamp: false, shutter: false, level: 0.93, refRead: null },
     mid: { window: null, pad: null, mode: null, chain: false } };   // 3T only: wiped corner, what is under the mid pins, where M-F/M-S go, multimeter chain check
 }
-function correctState(track) {
-  const s = defaultState(track);
+function correctState(track, bl) {   // bl: beamline cell v3 (10/30)
+  const s = defaultState(track, bl);
   s.station = 'ok'; s.cell = track === 'single' ? 'down' : 'up'; s.mask = 'ok';
   if (track === 'single') { s.ring = 'in'; s.lid = 'closed'; s.db15 = true; s.rotary = 1; }
   else s.knobs = [1.8, 1.8];
@@ -84,6 +87,7 @@ function correctState(track) {
   s.pc = { connected: true, fourWire: true, vStart: -0.1, vStop: track === 'single' ? 1.3 : 2.0, step: 0.01, delay: 50, dir: 'both',
     comp: track === 'single' ? 10 : 50, area: String(TRACKS[track].aMask) };
   s.light = { lamp: true, shutter: true, level: 1.0, refRead: 1.0 };
+  if (bl) { s.blm = 'ok'; if (track === 'single') s.pc.area = String(TRACKS.single.aDev); }   // beamline single: no aperture mask -> whole pixel
   return s;
 }
 
@@ -115,6 +119,7 @@ function circuit(s) {
     if (s.cell === 'up') { out.open = true; out.why.push('upside'); }
     if (!s.db15) { out.open = true; out.why.push('nodb15'); }
     if (!s.rotary) { out.open = true; out.why.push('rotaryoff'); }
+    if (s.bl && s.rotary > 2) { out.open = true; out.why.push('blpixel'); }   // beamline v3 single: needles on P1S / P2S only
   }
   let polCell = 1;
   if (!si && s.cell === 'flip') polCell = -1;           // front pins on the Si-side (−) pads
@@ -148,7 +153,8 @@ function circuit(s) {
   let L = s.light.lamp && s.light.shutter ? s.light.level : 0;
   if (s.station === 'tilt') L *= 0.97;                                  // off its seat: off the beam centre (ASSUMED −3 %)
   let aIll = T.aMask;
-  if (si) { if (s.mask === 'shift') aIll = 0.6 * T.aMask; if (s.mask === 'none') aIll = T.aDev; }
+  if (si) { if (s.bl) aIll = T.aDev;   // beamline v3 single: no aperture mask, the whole pixel under the 20 x 20 frame window is lit
+    else { if (s.mask === 'shift') aIll = 0.6 * T.aMask; if (s.mask === 'none') aIll = T.aDev; } }
   else { if (s.mask === 'none') aIll = 1.05 * T.aMask;                 // light past the 1 cm edge (ASSUMED +5 %)
     if (s.mask === 'rot') aIll = 0.92 * T.aMask;                        // rotated pair shades a corner (ASSUMED 8 %)
     if (s.cell === 'flip') L *= 0.02; }                                  // light enters Si first: PVK (limiting) cell starves (ASSUMED 2 %)
@@ -252,15 +258,16 @@ window.JV = { VT, TRACKS, DEV, pinR, pinForces, circuit, simulate, midRead, extr
 const J = window.JV, f1 = (x, d) => (x == null || !isFinite(x) ? '–' : x.toFixed(d));
 
 const REF = {};
-function refFig(t) { return REF[t] || (REF[t] = J.simulate(J.correctState(t)).scans[0].fig); }
+function refFig(t, bl) { const k = t + (bl ? ':bl' : ''); return REF[k] || (REF[k] = J.simulate(J.correctState(t, bl)).scans[0].fig); }
 function diagnose(s, res) {
-  const T = J.TRACKS[s.track], c = res.circuit, msg = [], why = c.why, A = T.aMask;
-  const ref = refFig(s.track), rev = res.scans[0].fig;
+  const T = J.TRACKS[s.track], c = res.circuit, msg = [], why = c.why, A = s.bl && s.track === 'single' ? T.aDev : T.aMask;
+  const ref = refFig(s.track, s.bl), rev = res.scans[0].fig;
   const add = (t) => msg.push(t);
   if (why.includes('nojig')) add('지그를 스테이션에 올리지 않았습니다. 지그가 없으니 잴 것이 없습니다.');
   if (why.includes('nocell')) add('셀을 넣지 않아 핀이 아무것도 누르지 않습니다 → 전류 0, 잡음만.');
   if (why.includes('upside')) add('셀을 뒤집어 넣어(막면이 위) 핀이 유리 뒷면에 닿았습니다 → 회로가 열려 잡음만 나옵니다.');
   if (why.includes('nodb15')) add('DB15 케이블을 스위치 박스에 꽂지 않았습니다 → 회로가 열려 잡음만 나옵니다.');
+  if (why.includes('blpixel')) add('빔라인 셀 v3 싱글은 바늘이 P1·P2 화소(P1S·P2S)에만 닿습니다 → 로터리 P3·P4는 열린 회로라 잡음만 나옵니다.');
   if (why.includes('rotaryoff')) add('스위치 박스 로터리가 OFF라 어느 화소도 키슬리에 붙지 않았습니다 → 잡음만.');
   if (why.includes('noforce')) add('키슬리 HI 또는 LO에 F 선이 없습니다. 전류가 흐를 길이 없어 잡음만 나옵니다.');
   if (why.includes('sameside')) add('HI와 LO에 같은 쪽(+끼리 또는 −끼리) 선을 꽂아 셀을 거치지 않습니다 → 잡음만.');
@@ -299,7 +306,7 @@ function diagnose(s, res) {
     else if (c.Rext > 3) add('핀 접촉 저항이 ' + f1(c.Rext, 0) + ' Ω으로 크지만 4선이 키슬리 사양 한도(선당 ' + J.SENSE_LIMIT + ' V)까지는 빼 줍니다. 넘는 만큼은 곡선에 남습니다.');
   }
   const a = parseFloat(s.pc.area);
-  if (Math.abs(a - A) / A > 0.01) add('면적을 ' + a + ' cm²로 넣었는데 마스크 구멍은 ' + A + ' cm²입니다 → J가 ' + f1(A / a, 2) + '배로 나옵니다.');
+  if (Math.abs(a - A) / A > 0.01) add('면적을 ' + a + ' cm²로 넣었는데 ' + (s.bl && s.track === 'single' ? '빛 받는 화소 전체는 ' : '마스크 구멍은 ') + A + ' cm²입니다 → J가 ' + f1(A / a, 2) + '배로 나옵니다.');
   const iscTrue = ref.Jsc / 1000 * A;
   const hitComp = res.scans.some((sc) => sc.pts.some((q) => Math.abs(q.j) * res.area / 1000 >= res.comp * 0.999));
   if (hitComp && !c.runaway && res.comp < iscTrue * 0.98) add('compliance ' + f1(res.comp * 1000, 1) + ' mA가 단락 전류 약 ' + f1(iscTrue * 1000, 2) + ' mA보다 작아 전류가 잘렸습니다.');
@@ -365,6 +372,15 @@ function selfTest() {
   r = modM((s) => { s.mid.window = 'key'; }); check('3T 키 모서리를 닦음 → T–M 0 V', r.mid.atVoc.Vread === 0 && r.scans[0].fig.Voc != null, 'V_read ' + f1(r.mid.atVoc.Vread, 2));
   r = modM((s) => { s.jacks.HI = 'M-F'; }); check('3T M-F를 2400 HI에 → 잡음만 (금지)', r.circuit.why.includes('midloop') && (r.scans[0].fig.Jsc == null || Math.abs(r.scans[0].fig.Jsc) < 0.05), 'Jsc ' + f1(r.scans[0].fig.Jsc, 4));
   r = modM((s) => { s.mid.mode = 'si'; }); check('3T 소면적 Si Jsc → 가로 강하 < 0.2 V, 전면적 > 1 V', r.mid.small.drop < 0.2 && r.mid.dropFull > 1, 'small ' + f1(r.mid.small.drop, 3) + ' full ' + f1(r.mid.dropFull, 2));
+  // beamline cell v3 (10/30): the same devices; single = no aperture mask (whole pixel lit, area = pixel, so Voc a little above the masked run), needles on P1 / P2 only
+  for (const t of ['single', 'tandem', 'tandem3t']) {
+    const s = C(t, true), r2 = J.simulate(s), f2 = r2.scans[0].fig, T2 = J.TRACKS[t].target, msg = diagnose(s, r2);
+    const vOk = t === 'single' ? f2.Voc >= S0.Voc - 0.005 && f2.Voc < S0.Voc + 0.1 : Math.abs(f2.Voc / T2.Voc - 1) < 0.02;
+    const ffOk = t === 'single' ? f2.FF > T2.FF - 0.08 && f2.FF <= T2.FF + 0.005 : Math.abs(f2.FF - T2.FF) < 0.02;   // single: 3.75x the current through the same pixel Rs
+    check('빔라인 셀 v3 ' + t + ': 바른 순서 → Jsc 예시 값, 진단 “제대로”', vOk && Math.abs(f2.Jsc / T2.Jsc - 1) < 0.02 && ffOk && /제대로/.test(msg[0] || ''),
+      'Voc ' + f1(f2.Voc, 3) + ' Jsc ' + f1(f2.Jsc, 2) + ' FF ' + f1(f2.FF, 3) + ' · ' + (msg[0] || '').slice(0, 30));
+  }
+  f = run((() => { const s = C('single', true); s.rotary = 3; return s; })()); check('빔라인 셀 v3 싱글 P3 → 잡음만', f.Jsc == null || Math.abs(f.Jsc) < 0.05, 'Jsc ' + f1(f.Jsc, 4));
   const pass = out.filter((x) => x.ok).length;
   return { pass, total: out.length, results: out };
 }
@@ -378,22 +394,40 @@ const J = window.JV, $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const f = (x, d) => (x == null || !isFinite(x) ? '–' : x.toFixed(d));
 
-const STEPS = {
+const STEPS_PROD = {
   single: [['station', '지그 올리기'], ['cell', '셀 넣기'], ['mask', '마스크·링'], ['lid', '뚜껑 닫기'], ['wire', '선 연결'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
   tandem: [['station', '지그 올리기'], ['mask', '마스크 쌍'], ['cell', '포켓에 넣기'], ['knob', '노브 조이기'], ['wire', '선 연결'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
   tandem3t: [['station', '지그 올리기'], ['mask', '마스크 쌍 (3T)'], ['cell', '포켓에 넣기'], ['knob', '노브 조이기'], ['wire', 'T–B 선 연결'], ['mid', '3T: M 연결'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
 };
-const VIEW = { station: 'jig', cell: 'jig', mask: 'jig', lid: 'jig', knob: 'jig', wire: 'bench', mid: 'bench', pc: 'keithley', light: 'lamp', run: 'bench' };
+// beamline cell v3 (10/30): one mounting step instead of station / mask / lid / knobs
+const STEPS_BL = {
+  single: [['blmount', '셀 장착 (바늘 4)'], ['wire', '선 연결'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
+  tandem: [['blmount', '웨이퍼 장착 (핀 4 + 바늘 4)'], ['wire', '선 연결 (DB15)'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
+  tandem3t: [['blmount', '웨이퍼 장착 (바늘 6)'], ['wire', 'T–B 선 연결 (DB15)'], ['mid', '3T: M 연결'], ['pc', 'PC 설정'], ['light', '빛·기준 셀'], ['run', 'J–V 재기']],
+};
+let STEPS = STEPS_PROD;
+const VIEW = { blmount: 'jig', station: 'jig', cell: 'jig', mask: 'jig', lid: 'jig', knob: 'jig', wire: 'bench', mid: 'bench', pc: 'keithley', light: 'lamp', run: 'bench' };
 const LEADS = { single: { 'F+': 'F+ (ITO F)', 'S+': 'S+ (ITO S)', 'F-': 'F− (화소 F)', 'S-': 'S− (화소 S)' },
   tandem: { 'F+': 'F+ (윗판 SMA)', 'S+': 'S+ (윗판 SMA)', 'F-': 'F− (아랫판 SMA)', 'S-': 'S− (아랫판 SMA)' } };
 LEADS.tandem3t = Object.assign({}, LEADS.tandem, { 'M-F': 'M-F (윗판 −y SMA, 3T mid)', 'M-S': 'M-S (윗판 −y SMA, 3T mid)' });
+const LEADS_BL = { single: LEADS.single, tandem: { 'F+': 'F+ (앞 바늘, DB15)', 'S+': 'S+ (앞 바늘, DB15)', 'F-': 'F− (뒤 핀, DB15)', 'S-': 'S− (뒤 핀, DB15)' } };
+LEADS_BL.tandem3t = Object.assign({}, LEADS_BL.tandem, { 'M-F': 'M-F (mid 바늘, DB15)', 'M-S': 'M-S (mid 바늘, DB15)' });
 const JACKS = [['HI', 'HI'], ['LO', 'LO'], ['SHI', 'SENSE HI'], ['SLO', 'SENSE LO']];
 const GLB = { single: 'single_prod', tandem: 'tandem_prod', tandem3t: 'tandem_prod_3t' };
+const GLB_BL = { single: 'beamline_wc_single', tandem: 'beamline_wc_2t', tandem3t: 'beamline_wc_3t' };
+// the single / 3T GLBs hold only the parts that differ from 2T; these 2T parts (GLTF-sanitised names) are shared
+const WC_BASE = { beamline_wc_single: 'beamline_wc_2t', beamline_wc_3t: 'beamline_wc_2t' };
+const WC_SHARED = {"beamline_wc_single": ["셀_몸체_Al_6061_흑색_아노다이징_70x66x10_R4_(포켓_31x31x45,_뒷면_평면_+_M4_x4_48x48,_뒷면_배선_홈)", "누름_틀_Al_10_40x40,_창_20x20_+_홈_6,_립_25x25_(05),_+X_15°_모따기,_M2_x4", "Kapton_005_(립_접촉면)", "M2x4_냄비머리_x4_(누름_틀)", "텐트_틀_Al_플랜지_10_(몸체_외곽_70x66,_안쪽_X_-285…249,_Z_±285)_+_벽_15,_5_앞,_+X는_벽_없이_15°_접힘", "CPI_필름_50_µm_텐트_창_(무색_폴리이미드;_대안_PET_12_µm),_틀에_접착", "M2x4_냄비머리_x4_(텐트_플랜지)", "가스_원터치_SMC_KQ2H04-M5_x2_(윗면_X_±19,_Ø2_→_앞면_Z+22로_텐트_안)", "커넥터_브래킷_Al_(밑판_26x18x2_+_판_57x17x2,_뒤로_8_돌출)_+_M3_x2", "M3x8_x2_(브래킷_→_몸체_윗면)", "DB15_(DA-15)_암_판넬형_(뒤_+Y로;_플랜지_391x125,_몸체_31x8x9_가정)", "SMA_판넬_잭_x2_(Ø635x8)", "배선_묶음_Ø29_(10가닥_접촉_8_+_예비_2;_뒷면_줄기_홈_→_윗면_→_DB15_뒤)", "Grace_새_세로판_60x120x7_(재출력,_레진_가정),_Ø45_x4_48x48,_위끝_=_웨이퍼_중심_+31", "Grace_2025_앵글_브래킷_\"angle_bracket_for_Ramen_holderSTEP\"_(형상_그대로;_X=z,_Y=x−6,_Z=y)", "M4x12_렌치볼트_x4_(판_뒤에서_몸체_M4_탭으로,_머리_Ø7x4)", "M4x16_볼트_+_너트_x4_(판_아래_구멍_↔_브래킷_세움판_Ø56_구멍_y_2953)"], "beamline_wc_3t": ["셀_몸체_Al_6061_흑색_아노다이징_70x66x10_R4_(포켓_31x31x45,_뒷면_평면_+_M4_x4_48x48,_뒷면_배선_홈)", "PEEK_인서트_(a)_탠덤_308x308x40,_웨이퍼_우물_253x253x055,_Mill-Max_0906-1_x4_(±645)_압입", "M2x6_인서트_고정_x2_(앞에서,_머리_Ø38_윗면_=_우물_바닥,_가정_DIN_912)", "스프링_핀_Mill-Max_0906-1_x4_(뒷면_패드_±645,_09_압축_=_072_N개)", "KIER_웨이퍼_25x25x05_(가정_03–05)", "KIER_뒷면_Ag_패드_Ø16_x4_(±645,_탠덤_v3_TB_핀_위치;_크기_가정)", "KIER_앞면_IZO_(마스크_사진_기준)", "KIER_앞면_Ag_(프레임_+_패드_Ø16_at_±643)", "KIER_앞면_MgF2", "M2x4_냄비머리_x4_(누름_틀)", "텐트_틀_Al_플랜지_10_(몸체_외곽_70x66,_안쪽_X_-285…249,_Z_±285)_+_벽_15,_5_앞,_+X는_벽_없이_15°_접힘", "CPI_필름_50_µm_텐트_창_(무색_폴리이미드;_대안_PET_12_µm),_틀에_접착", "M2x4_냄비머리_x4_(텐트_플랜지)", "가스_원터치_SMC_KQ2H04-M5_x2_(윗면_X_±19,_Ø2_→_앞면_Z+22로_텐트_안)", "커넥터_브래킷_Al_(밑판_26x18x2_+_판_57x17x2,_뒤로_8_돌출)_+_M3_x2", "M3x8_x2_(브래킷_→_몸체_윗면)", "DB15_(DA-15)_암_판넬형_(뒤_+Y로;_플랜지_391x125,_몸체_31x8x9_가정)", "SMA_판넬_잭_x2_(Ø635x8)", "배선_묶음_Ø29_(10가닥_접촉_8_+_예비_2;_뒷면_줄기_홈_→_윗면_→_DB15_뒤)", "Grace_새_세로판_60x120x7_(재출력,_레진_가정),_Ø45_x4_48x48,_위끝_=_웨이퍼_중심_+31", "Grace_2025_앵글_브래킷_\"angle_bracket_for_Ramen_holderSTEP\"_(형상_그대로;_X=z,_Y=x−6,_Z=y)", "M4x12_렌치볼트_x4_(판_뒤에서_몸체_M4_탭으로,_머리_Ø7x4)", "M4x16_볼트_+_너트_x4_(판_아래_구멍_↔_브래킷_세움판_Ø56_구멍_y_2953)"]};
+const WC_HIDE = /^Grace|^M4x1[26] /, WC_SMP = /^KIER|^단일 셀|^3T mid 창|^3T Ag mid/;
 
-let track = 'single', S = { single: J.defaultState('single'), tandem: J.defaultState('tandem'), tandem3t: J.defaultState('tandem3t') }, st = S.single, cur = 0, last = { single: null, tandem: null, tandem3t: null };
+const Sall = { prod: { single: J.defaultState('single'), tandem: J.defaultState('tandem'), tandem3t: J.defaultState('tandem3t') },
+  bl: { single: J.defaultState('single', true), tandem: J.defaultState('tandem', true), tandem3t: J.defaultState('tandem3t', true) } };
+const Lall = { prod: { single: null, tandem: null, tandem3t: null }, bl: { single: null, tandem: null, tandem3t: null } };
+let jigMode = 'prod', track = 'single', S = Sall.prod, st = S.single, cur = 0, last = Lall.prod;
 
 function done(id, s) {
   switch (id) {
+    case 'blmount': return s.blm != null;
     case 'station': return s.station != null;
     case 'cell': return s.cell != null;
     case 'mask': return s.mask != null && (s.track === 'tandem' || s.ring != null);
@@ -410,7 +444,28 @@ const opt = (path, v, text) => '<button class="opt" data-set="' + path + '" data
 function get(path) { return path.split('.').reduce((o, k) => o[k], st); }
 function set(path, v) { const ks = path.split('.'), k = ks.pop(); ks.reduce((o, q) => o[q], st)[k] = v; }
 
-function cardHTML(id) {
+function cardHTML(id) {   // beamline cell v3: its own mounting card, DB15 wiring text, the rest = the production cards
+  if (jigMode !== 'bl') return cardHTML0(id);
+  const si = track === 'single', t3 = track === 'tandem3t', N = (cur + 1) + '. ';
+  if (id === 'blmount') {
+    const o = (v, t) => '<button class="opt" data-blmount="' + v + '" aria-pressed="' + (st.blm === v) + '">' + t + '</button>';
+    return '<h2>' + N + '빔라인 셀에 장착 (' + (si ? '싱글' : t3 ? '탠덤 3T' : '탠덤 2T') + ')</h2><p>' + (si
+      ? 'PEEK 인서트 (b)의 우물(깊이 1.15)에 유리를 막 면이 바깥(빔 쪽)으로 오게 넣고, Al 누름 틀(Kapton 0.05 립)을 M2 ×4로 조입니다. PEEK 블록의 BeCu 바늘 4개가 P1S·P2S와 ITO 두 곳에 닿습니다 (스프링 핀 없음).'
+      : 'PEEK 인서트 (a)의 우물(깊이 0.55)에 웨이퍼를 PVK 쪽이 바깥(빔 쪽)으로 오게 넣으면 뒷면 스프링 핀 4개(±6.45)가 뒷면 패드에 닿고, Al 누름 틀을 M2 ×4로 조인 뒤 BeCu 바늘 4개가 앞 Ag 패드(±6.43)에 닿습니다.' +
+        (t3 ? ' 3T: 3T 누름 틀(모서리 6×6 홈)과 mid 2바늘 블록이 M-F·M-S 패드에 닿습니다.' : '')) +
+      ' 연습에서는 셀을 Grace 판에서 떼어 눕혀 램프 아래에 둡니다(연습용 배치). 접촉 힘은 제작 지그의 멈춤 값으로 계산합니다(예시).</p><div class="opts">' +
+      o('ok', si ? '막 면 바깥 · 누름 틀 조임' : 'PVK 바깥 · 누름 틀 조임') + o('flip', si ? '유리를 뒤집어 넣음' : '웨이퍼 뒤집힘 (Si 쪽이 바깥)') + '</div>';
+  }
+  let h = cardHTML0(id);
+  if (id === 'wire' && !si) h = '<h2>' + N + (t3 ? 'T–B 선 연결 (DB15)' : '선 연결 (DB15)') + '</h2><p>빔라인 셀은 바늘·핀 선 ' + (t3 ? '10' : '8') +
+    '가닥이 몸체 뒷면 홈을 지나 DB15 하나로 나옵니다 (PCB 없음). DB15 분기 케이블(모델에 없음, 핀 배정 미정)에서 F+·S+(앞 바늘), F−·S−(뒤 핀)를 키슬리에: F+→HI, S+→SENSE HI, F−→LO, S−→SENSE LO.' +
+    (t3 ? ' <b>M-F·M-S(mid 바늘)는 여기 꽂지 않습니다</b> — 다음 단계에서 전압계로.' : '') + '</p>' + h.slice(h.indexOf('<p class="label">키슬리'));
+  if (id === 'wire' && si) h = h.replace('</p>', ' 빔라인 셀 v3 싱글은 바늘이 P1·P2에만 닿습니다 (로터리 P1·P2).</p>');
+  if (id === 'mid') h = h.replace('(윗판 −y 변 SMA)', '(DB15, mid 바늘 2개)');
+  if (id === 'pc' && si) h = h.replace('싱글: 마스크 구멍 2.5 × 2.5 mm', '빔라인 셀 싱글: 마스크 없음 → 화소 전체 ' + J.TRACKS.single.aDev + ' cm² (빛도 화소 전체 → 마스크 측정보다 Voc 조금 높고, 전류가 커져 FF 조금 낮음; 예시 계산)');
+  return h;
+}
+function cardHTML0(id) {
   const T = J.TRACKS[track], si = track === 'single', t3 = track === 'tandem3t', N = (cur + 1) + '. ';
   switch (id) {
     case 'station': return '<h2>' + N + '지그를 스테이션에 올리기</h2><p>바닥 강구 3개가 스테이션 홈(MS3-10 두 개씩)에 들어가고 자석이 당기면 “딸깍” 앉습니다. 지그를 빼고 다시 올려도 같은 자리입니다.</p><div class="opts">' +
@@ -440,7 +495,7 @@ function cardHTML(id) {
     }
     case 'wire': {
       const sel = (key, label) => '<label class="field">' + label + '<select data-jack="' + key + '"><option value="">— 비움 —</option>' +
-        Object.entries(LEADS[track]).map(([v, t]) => '<option value="' + v + '"' + (st.jacks[key] === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>';
+        Object.entries((jigMode === 'bl' ? LEADS_BL : LEADS)[track]).map(([v, t]) => '<option value="' + v + '"' + (st.jacks[key] === v ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>';
       const jacks = '<p class="label">키슬리 2400 앞면 (빨강 HI·SENSE HI, 검정 LO·SENSE LO)</p><div class="grid2">' + JACKS.map(([k, l]) => sel(k, l)).join('') + '</div>';
       return si
         ? '<h2>' + N + '선 연결</h2><p>지그 DB15 → 스위치 박스. 지그에는 스위치가 없고, 박스의 4단 2극 로터리가 화소의 F·S를 같이 고릅니다. 박스 출력 4개를 키슬리에 꽂습니다(ITO = +, 화소 Ag = −).</p><div class="opts">' +
@@ -497,10 +552,14 @@ function changed() { if (st.light.refRead != null && !(st.light.lamp && st.light
 document.addEventListener('click', (e) => {
   const b = e.target.closest('button'); if (!b) return;
   if (/^tr-(single|tandem|tandem3t)$/.test(b.id)) return setTrack(b.id.slice(3));
+  if (/^jg-(prod|bl)$/.test(b.id)) return setJig(b.id.slice(3));
+  if (b.dataset.blmount) { const c = J.correctState(track, true);
+    for (const k of ['station', 'mask', 'ring', 'lid', 'knobs']) st[k] = JSON.parse(JSON.stringify(c[k]));
+    st.cell = b.dataset.blmount === 'ok' ? c.cell : (track === 'single' ? 'up' : 'flip'); st.blm = b.dataset.blmount; render(); changed(); return; }
   if (b.dataset.step != null) return go(+b.dataset.step);
   if (b.id === 'prev') return go(cur - 1);
   if (b.id === 'next') return go(cur + 1);
-  if (b.id === 'fill') { S[track] = st = J.correctState(track); render(); changed(); return toast('모든 단계를 바르게 채웠습니다. 8단계에서 재 보세요.'); }
+  if (b.id === 'fill') { S[track] = st = J.correctState(track, jigMode === 'bl'); render(); changed(); return toast('모든 단계를 바르게 채웠습니다. 8단계에서 재 보세요.'); }
   if (b.dataset.set) { set(b.dataset.set, b.dataset.v); render(); changed(); return; }
   if (b.dataset.toggle) { set(b.dataset.toggle, !get(b.dataset.toggle)); render(); changed(); return; }
   if (b.dataset.rot != null) { st.rotary = +b.dataset.rot; render(); changed(); return; }
@@ -527,6 +586,12 @@ function turn(k, d) {
   else st.knobs[k] = Math.max(-1.5, t);
   if (STEPS[track][cur][0] === 'knob') render(); changed();
 }
+function setJig(m) {   // 제작 지그 | 빔라인 셀 v3: separate states and results per jig
+  jigMode = m; S = Sall[m]; last = Lall[m]; STEPS = m === 'bl' ? STEPS_BL : STEPS_PROD;
+  for (const k of ['prod', 'bl']) $('jg-' + k).setAttribute('aria-pressed', String(m === k));
+  $('jgnote').hidden = m !== 'bl';
+  setTrack(track);
+}
 function setTrack(t) {
   track = t; st = S[t]; cur = 0;
   for (const k of Object.keys(GLB)) $('tr-' + k).setAttribute('aria-pressed', String(t === k));
@@ -548,7 +613,7 @@ function showResult() {
   if (!L) { box.hidden = true; return; }
   box.hidden = false;
   if (L.err) { $('chart').innerHTML = ''; $('tbl').innerHTML = ''; $('vmid').hidden = true; $('msgs').className = 'msgs bad'; $('msgs').innerHTML = '<li>' + esc(L.err) + '</li>'; return; }
-  const res = L.res, ref = J.simulate(J.correctState(track)).scans[0], T = J.TRACKS[track].target;
+  const res = L.res, ref = J.simulate(J.correctState(track, jigMode === 'bl')).scans[0], T = J.TRACKS[track].target;
   $('chart').innerHTML = chart(res.scans, ref, L.state.pc);
   const row = (name, x) => '<tr><td>' + name + '</td><td>' + f(x.Voc, 3) + '</td><td>' + f(x.Jsc, 2) + '</td><td>' + (x.FF == null ? '–' : f(x.FF * 100, 1)) + '</td><td>' + f(x.PCE, 2) + '</td></tr>';
   $('tbl').innerHTML = '<tr><th></th><th>Voc (V)</th><th>Jsc (mA/cm²)</th><th>FF (%)</th><th>PCE (%)</th></tr>' +
@@ -643,17 +708,34 @@ function parseGLB(key, cb) {
   const buf = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)).buffer;
   new THREE.GLTFLoader().parse(buf, '', (g) => { glbCache[key] = g; cb(g); }, () => { $('status').textContent = '모델을 읽지 못했습니다.'; });
 }
+function parseModel(key, cb) {   // beamline v3 single / 3T = own parts + the shared 2T parts
+  const base = WC_BASE[key];
+  if (!base) return parseGLB(key, cb);
+  if (glbCache['+' + key]) return cb(glbCache['+' + key]);
+  parseGLB(key, (own) => parseGLB(base, (bg) => {
+    const grp = new THREE.Group(), want = new Set(WC_SHARED[key]); grp.add(own.scene.clone(true));
+    bg.scene.updateMatrixWorld(true); const inv = bg.scene.matrixWorld.clone().invert();
+    bg.scene.traverse((o) => { if (!o.isMesh || !(want.has(o.name) || want.has(o.name.replace(/_\d+$/, '')))) return;
+      const m = new THREE.Mesh(o.geometry, o.material); m.name = o.name; m.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, o.matrixWorld)); grp.add(m); });
+    cb(glbCache['+' + key] = { scene: grp });
+  }));
+}
 function build3D() {
   if (jig) { world.remove(jig.root); jig = null; }
   picks.length = 0;
-  const key = GLB[track];
+  const key = (jigMode === 'bl' ? GLB_BL : GLB)[track];
   $('status').hidden = false;
-  parseGLB(key, (gltf) => {
+  parseModel(key, (gltf) => {
     const src = gltf.scene.clone(true), root = new THREE.Group(); world.add(root);
+    // beamline v3: CAD frame = cell upright, film side -y; measure it lying on its back under the lamp (wafer centre over the origin)
+    const bl = jigMode === 'bl', ab = new THREE.Box3(), sb = new THREE.Box3(), db = new THREE.Box3();
+    if (bl) src.traverse((o) => { if (!o.isMesh) return; const n = o.name.replace(/_/g, ' '); if (WC_HIDE.test(n)) return;
+      o.geometry.computeBoundingBox(); ab.union(o.geometry.boundingBox); if (WC_SMP.test(n)) sb.union(o.geometry.boundingBox); if (/^DB15/.test(n)) db.union(o.geometry.boundingBox); });
+    const WCC = bl ? sb.getCenter(new THREE.Vector3()) : null;
     const G = (name) => { const g = new THREE.Group(); g.name = name; root.add(g); return g; };
     const station = G('station'), body = G('body');
     const pivot = (x, y, z, parent) => { const g = new THREE.Group(); g.position.set(x, y, z); (parent || body).add(g); return g; };
-    const sample = pivot(0, 0, 3.73), maskG = pivot(0, 0, 0), ringG = pivot(0, 0, 0);
+    const sample = bl ? pivot(WCC.x, WCC.y, WCC.z) : pivot(0, 0, 3.73), maskG = pivot(0, 0, 0), ringG = pivot(0, 0, 0);
     const lid = pivot(-24.5, 0, 5.9), top = pivot(0, 0, 0);
     const knobs = [pivot(18, 18, 0, top), pivot(-18, -18, 0, top)];
     const meshes = []; src.traverse((o) => { if (o.isMesh) meshes.push(o); });
@@ -665,9 +747,10 @@ function build3D() {
       if (ca) base.setRGB(ca.getX(0) * k, ca.getY(0) * k, ca.getZ(0) * k).convertSRGBToLinear(); else if (o.material && o.material.color) base.copy(o.material.color);
       o.material = new THREE.MeshStandardMaterial({ color: base, flatShading: true, roughness: /Mill-Max|SMA|DB15 female/.test(n) ? 0.35 : 0.7,
         metalness: /Mill-Max|SMA|screw|bolt|dowel|hinge pin|magnet|ball|rod|knob|nut/.test(n) ? 0.55 : 0.05,
-        transparent: /sample: ITO glass|Si wafer/.test(n), opacity: /sample: ITO glass/.test(n) ? 0.55 : 1 });
+        transparent: /sample: ITO glass|Si wafer|^단일 셀 유리|^CPI 필름/.test(n), opacity: /sample: ITO glass|^단일 셀 유리/.test(n) ? 0.55 : /^CPI 필름/.test(n) ? 0.3 : 1 });
       let g = body;
-      if (/^station plate|^groove rod|station side/.test(n)) g = station;
+      if (bl) { if (WC_HIDE.test(n)) continue; if (WC_SMP.test(n)) g = sample; }   // Grace's plate + bracket stay at the beamline
+      else if (/^station plate|^groove rod|station side/.test(n)) g = station;
       else if (/^sample|^KIER measurement mask|^Kapton tape|^3T mid window/.test(n)) g = sample;
       else if (/^aperture mask/.test(n)) g = maskG;
       else if (/^press ring/.test(n)) g = ringG;
@@ -679,7 +762,13 @@ function build3D() {
       if (/^knob|^hinged lid/.test(n)) { o.userData.pick = /^knob 1/.test(n) ? 'k0' : /^knob 2/.test(n) ? 'k1' : 'lid'; picks.push(o); }
     }
     root.remove(src);
-    if (track !== 'single') {   // KIER mask pair: the CAD masks when the GLB has them (production models), else drawn here: 25 mm steel, 1 x 1 cm window, holes at ±6.45
+    let db15W = null;
+    if (bl) {   // lay it down: CAD (x, y, z) -> (x - cx, z - cz, BZ + ymax - y)
+      root.rotation.x = -Math.PI / 2; root.position.set(-WCC.x, -WCC.z, BZ + ab.max.y);
+      const d = db.getCenter(new THREE.Vector3()); db15W = [d.x - WCC.x, d.z - WCC.z, BZ + ab.max.y - d.y];
+      jig_pair = null;
+    }
+    if (track !== 'single' && !bl) {   // KIER mask pair: the CAD masks when the GLB has them (production models), else drawn here: 25 mm steel, 1 x 1 cm window, holes at ±6.45
       const pair = new THREE.Group(); sample.add(pair);
       const glbMasks = sample.children.filter((o) => o.isMesh && /^KIER measurement mask|^Kapton tape/.test(o.name.replace(/_/g, ' ')));
       if (glbMasks.length) glbMasks.forEach((o) => pair.attach(o));
@@ -695,7 +784,7 @@ function build3D() {
       }
       jig_pair = pair;
     }
-    jig = { root, station, body, sample, maskG, ringG, lid, top, knobs };
+    jig = { root, station, body, sample, maskG, ringG, lid, top, knobs, bl, sc: WCC, db15W };
     $('status').hidden = true; applyTheme(); update3D(true);
   });
 }
@@ -724,17 +813,19 @@ function update3D(instant) {
   lamp.children[0].material.emissive = new THREE.Color(s.light.lamp ? 0x332a00 : 0x000000);
   // cables
   while (cables.children.length) { const m = cables.children.pop(); m.geometry.dispose(); }
-  if (track === 'single' && s.db15) cable([[0, 43, 6], [0, 60, 8], [0, 80, 10], [0, 90, BZ + 20]], 0x8d959c, 3.2);
+  const dW = jig.db15W;   // beamline v3: every lead leaves through the DB15 on the cell
+  if (track === 'single' && s.db15) cable(dW ? [dW, [dW[0], dW[1] + 18, dW[2] + 2], [0, 80, BZ + 10], [0, 90, BZ + 20]] : [[0, 43, 6], [0, 60, 8], [0, 80, 10], [0, 90, BZ + 20]], 0x8d959c, 3.2);
   if (s.pc.connected) cable([[-190, 286, BZ + 20], [-120, 400, BZ + 2], [100, 540, BZ + 2], [230, 516, BZ + 40]], 0x2d2d2d, 2.2);
   const SMA = { 'F+': [-10, 36, 8.3], 'S+': [0, 36, 8.3], 'F-': [-5, 36, -0.8], 'S-': [5, 36, -0.8], 'M-F': [-10, -36, 8.3], 'M-S': [10, -36, 8.3] };   // M-F / M-S on the TT3 -y edge
+  const LOFF = { 'F+': -6, 'S+': -2, 'F-': 2, 'S-': 6, 'M-F': -10, 'M-S': 10 }, from = (lead) => (dW ? [dW[0] + LOFF[lead], dW[1] + 4, dW[2]] : SMA[lead]);
   const toJack = (st0, e, col, r) => { const dy = st0[1] < 0 ? -1 : 1, sOff = track === 'single' ? 12 : 20;
     cable([[st0[0], st0[1] + 2 * dy, st0[2]], [st0[0], st0[1] + sOff * dy, st0[2] + 3], [(st0[0] + e[0]) / 2, (st0[1] + e[1]) / 2 - 10, BZ + 3], [e[0], e[1] - 20, e[2] - 4], [e[0], e[1] - 3, e[2]]], col, r); };
   for (const [jk, lead] of Object.entries(s.jacks)) {
     if (!lead) continue;
-    const st0 = track === 'single' ? SWOUT[lead] : SMA[lead], col = /^M-/.test(lead) ? 0xd08a1e : lead[1] === '+' ? 0xc0262d : 0x161616;
+    const st0 = track === 'single' ? SWOUT[lead] : from(lead), col = /^M-/.test(lead) ? 0xd08a1e : lead[1] === '+' ? 0xc0262d : 0x161616;
     toJack(st0, JACKPOS[jk], col, track === 'single' ? 1.4 : 1.9);
   }
-  if (track === 'tandem3t' && s.mid.mode) for (const [lead, e] of Object.entries(DMMPOS)) toJack(SMA[lead], e, s.mid.mode === 'drive' ? 0xc0262d : 0xd08a1e, 1.9);   // M pair -> voltmeter (red = current forced through M: not allowed)
+  if (track === 'tandem3t' && s.mid.mode) for (const [lead, e] of Object.entries(DMMPOS)) toJack(from(lead), e, s.mid.mode === 'drive' ? 0xc0262d : 0xd08a1e, 1.9);   // M pair -> voltmeter (red = current forced through M: not allowed)
   if (instant) for (const k in A) curA[k] = A[k];
 }
 const curA = {};
@@ -742,8 +833,9 @@ function stepAnim() {
   if (!jig) return;
   for (const k in anim) { if (curA[k] == null) curA[k] = anim[k]; curA[k] += (anim[k] - curA[k]) * 0.16; if (Math.abs(anim[k] - curA[k]) < 1e-4) curA[k] = anim[k]; }
   const a = curA;
-  jig.body.position.set(a.bodyX, 0, a.bodyZ); jig.body.rotation.x = a.bodyTilt;
-  jig.sample.position.z = 3.73 + a.sampleZ; jig.sample.rotation.x = a.sampleFlip;
+  if (jig.bl) { jig.body.position.set(a.bodyX, -a.bodyZ, 0); jig.sample.position.set(jig.sc.x, jig.sc.y - a.sampleZ, jig.sc.z); }   // cell frame: -y = up on the bench
+  else { jig.body.position.set(a.bodyX, 0, a.bodyZ); jig.sample.position.z = 3.73 + a.sampleZ; }
+  jig.body.rotation.x = a.bodyTilt; jig.sample.rotation.x = a.sampleFlip;
   jig.maskG.position.x = a.maskX; jig.lid.rotation.y = a.lid;
   jig.top.position.z = a.topZ; jig.top.setRotationFromAxisAngle(new THREE.Vector3(1, -1, 0).normalize(), a.topTilt);
   jig.knobs[0].rotation.z = a.k0; jig.knobs[1].rotation.z = a.k1;
@@ -769,9 +861,10 @@ const LABELS = [
   ['S HI', () => cad(...JACKPOS.SHI).add(new THREE.Vector3(0, 9, 0)), () => true], ['S LO', () => cad(...JACKPOS.SLO).add(new THREE.Vector3(0, 9, 0)), () => true],
   ['스위치 박스', () => cad(0, 120, BZ + 70), () => track === 'single'],
   ['램프', () => cad(0, 0, 385), () => true], ['PC', () => cad(-190, 260, BZ + 175), () => true], ['기준 셀', () => cad(-90, -20, BZ + 18), () => true],
-  ['노브 1', () => cad(18, 18, 22), () => track !== 'single'], ['노브 2', () => cad(-18, -18, 22), () => track !== 'single'],
+  ['노브 1', () => cad(18, 18, 22), () => track !== 'single' && jigMode !== 'bl'], ['노브 2', () => cad(-18, -18, 22), () => track !== 'single' && jigMode !== 'bl'],
+  ['DB15 (빔라인 셀 v3)', () => cad(...((jig && jig.db15W) || [0, 0, 0])).add(new THREE.Vector3(0, 10, 0)), () => jigMode === 'bl'],
   ['전압계 (T–M = V_PVK, I ≈ 0)', () => cad(D.x, D.front - 5, BZ + 62), () => track === 'tandem3t'],
-  ['M-F·M-S (−y)', () => cad(0, -40, 14), () => track === 'tandem3t'],
+  ['M-F·M-S (−y)', () => cad(0, -40, 14), () => track === 'tandem3t' && jigMode !== 'bl'],
 ];
 const labelEls = LABELS.map(([t]) => { const el = document.createElement('div'); el.className = 'tagl'; el.textContent = t; $('labels').appendChild(el); return el; });
 // picking
