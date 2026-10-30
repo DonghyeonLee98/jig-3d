@@ -267,7 +267,7 @@ function diagnose(s, res) {
   if (why.includes('nocell')) add('셀을 넣지 않아 핀이 아무것도 누르지 않습니다 → 전류 0, 잡음만.');
   if (why.includes('upside')) add('셀을 뒤집어 넣어(막면이 위) 핀이 유리 뒷면에 닿았습니다 → 회로가 열려 잡음만 나옵니다.');
   if (why.includes('nodb15')) add('DB15 케이블을 스위치 박스에 꽂지 않았습니다 → 회로가 열려 잡음만 나옵니다.');
-  if (why.includes('blpixel')) add('빔라인 셀 v3.1 싱글은 바늘이 P1·P2 화소(P1S·P2S)에만 닿습니다 → 로터리 P3·P4는 열린 회로라 잡음만 나옵니다.');
+  if (why.includes('blpixel')) add('빔라인 셀 v3.2 싱글은 바늘이 P1·P2 화소(P1S·P2S)에만 닿습니다 → 로터리 P3·P4는 열린 회로라 잡음만 나옵니다.');
   if (why.includes('rotaryoff')) add('스위치 박스 로터리가 OFF라 어느 화소도 키슬리에 붙지 않았습니다 → 잡음만.');
   if (why.includes('noforce')) add('키슬리 HI 또는 LO에 F 선이 없습니다. 전류가 흐를 길이 없어 잡음만 나옵니다.');
   if (why.includes('sameside')) add('HI와 LO에 같은 쪽(+끼리 또는 −끼리) 선을 꽂아 셀을 거치지 않습니다 → 잡음만.');
@@ -377,10 +377,10 @@ function selfTest() {
     const s = C(t, true), r2 = J.simulate(s), f2 = r2.scans[0].fig, T2 = J.TRACKS[t].target, msg = diagnose(s, r2);
     const vOk = t === 'single' ? f2.Voc >= S0.Voc - 0.005 && f2.Voc < S0.Voc + 0.1 : Math.abs(f2.Voc / T2.Voc - 1) < 0.02;
     const ffOk = t === 'single' ? f2.FF > T2.FF - 0.08 && f2.FF <= T2.FF + 0.005 : Math.abs(f2.FF - T2.FF) < 0.02;   // single: 3.75x the current through the same pixel Rs
-    check('빔라인 셀 v3.1 ' + t + ': 바른 순서 → Jsc 예시 값, 진단 “제대로”', vOk && Math.abs(f2.Jsc / T2.Jsc - 1) < 0.02 && ffOk && /제대로/.test(msg[0] || ''),
+    check('빔라인 셀 v3.2 ' + t + ': 바른 순서 → Jsc 예시 값, 진단 “제대로”', vOk && Math.abs(f2.Jsc / T2.Jsc - 1) < 0.02 && ffOk && /제대로/.test(msg[0] || ''),
       'Voc ' + f1(f2.Voc, 3) + ' Jsc ' + f1(f2.Jsc, 2) + ' FF ' + f1(f2.FF, 3) + ' · ' + (msg[0] || '').slice(0, 30));
   }
-  f = run((() => { const s = C('single', true); s.rotary = 3; return s; })()); check('빔라인 셀 v3.1 싱글 P3 → 잡음만', f.Jsc == null || Math.abs(f.Jsc) < 0.05, 'Jsc ' + f1(f.Jsc, 4));
+  f = run((() => { const s = C('single', true); s.rotary = 3; return s; })()); check('빔라인 셀 v3.2 싱글 P3 → 잡음만', f.Jsc == null || Math.abs(f.Jsc) < 0.05, 'Jsc ' + f1(f.Jsc, 4));
   const pass = out.filter((x) => x.ok).length;
   return { pass, total: out.length, results: out };
 }
@@ -410,14 +410,14 @@ const VIEW = { blmount: 'jig', station: 'jig', cell: 'jig', mask: 'jig', lid: 'j
 const LEADS = { single: { 'F+': 'F+ (ITO F)', 'S+': 'S+ (ITO S)', 'F-': 'F− (화소 F)', 'S-': 'S− (화소 S)' },
   tandem: { 'F+': 'F+ (윗판 SMA)', 'S+': 'S+ (윗판 SMA)', 'F-': 'F− (아랫판 SMA)', 'S-': 'S− (아랫판 SMA)' } };
 LEADS.tandem3t = Object.assign({}, LEADS.tandem, { 'M-F': 'M-F (윗판 −y SMA, 3T mid)', 'M-S': 'M-S (윗판 −y SMA, 3T mid)' });
-const LEADS_BL = { single: LEADS.single, tandem: { 'F+': 'F+ (앞 바늘, DB15)', 'S+': 'S+ (앞 바늘, DB15)', 'F-': 'F− (뒤 핀, DB15)', 'S-': 'S− (뒤 핀, DB15)' } };
-LEADS_BL.tandem3t = Object.assign({}, LEADS_BL.tandem, { 'M-F': 'M-F (mid 바늘, DB15)', 'M-S': 'M-S (mid 바늘, DB15)' });
+const LEADS_BL = { single: LEADS.single, tandem: { 'F+': 'F+ (앞 바늘, DB15 5–8)', 'S+': 'S+ (앞 바늘, DB15 5–8)', 'F-': 'F− (뒤 핀, DB15 1–4)', 'S-': 'S− (뒤 핀, DB15 1–4)' } };
+LEADS_BL.tandem3t = Object.assign({}, LEADS_BL.tandem, { 'M-F': 'M-F (mid 바늘, DB15 13)', 'M-S': 'M-S (mid 바늘, DB15 14)' });
 const JACKS = [['HI', 'HI'], ['LO', 'LO'], ['SHI', 'SENSE HI'], ['SLO', 'SENSE LO']];
 const GLB = { single: 'single_prod', tandem: 'tandem_prod', tandem3t: 'tandem_prod_3t' };
 const GLB_BL = { single: 'beamline_wc_single', tandem: 'beamline_wc_2t', tandem3t: 'beamline_wc_3t' };
 // the single / 3T GLBs hold only the parts that differ from 2T; these 2T parts (GLTF-sanitised names) are shared
 const WC_BASE = { beamline_wc_single: 'beamline_wc_2t', beamline_wc_3t: 'beamline_wc_2t' };
-const WC_SHARED = {"beamline_wc_single": ["셀_몸체_Al_6061_흑색_아노다이징_70x66x10_R4_(포켓_31x31x45_R15,_블록_자리_04,_뒷면_평면_+_M4_x4_48x48,_뒷면_배선_홈)", "M2x8_접시머리_x2_(몸체_뒤에서_인서트_관통탭으로,_물림_25)", "누름_판_Al_10_40x40_(레이저),_창_20x20_+_홈_6,_+X_03_턱_+_15°_모따기_(X_125부터),_M2_접시_x4", "멈춤_링_PEEK_25x25x05,_창_20_+_같은_홈_(누름_판에_접착,_가정);_웨이퍼_앞면_=_Y_05", "M2x4_접시머리_x4_(누름_판,_머리_평면)", "텐트_틀_Al_플랜지_10_(몸체_외곽_70x66,_안쪽_X_-285…249,_Z_±285)_+_벽_25,_5_앞,_+X는_벽_없이_15°_접힘", "CPI_필름_50_µm_텐트_창_(무색_폴리이미드;_대안_PET_12_µm),_틀에_접착", "M2x4_냄비머리_x4_(텐트_플랜지)", "가스_원터치_SMC_KQ2H04-M5_x2_(윗면_X_±19,_Ø2_→_앞면_Z+22로_텐트_안)", "커넥터_브래킷_Al_(밑판_26x18x2_+_판_57x17x2,_뒤로_8_돌출)_+_M3_x2", "M3x6_x2_(브래킷_→_몸체_윗면,_물림_4)", "DB15_(DA-15)_암_판넬형_(뒤_+Y로;_플랜지_391x125,_몸체_31x8x9_가정)", "SMA_판넬_잭_x2_(Ø635x8)", "배선_묶음_Ø29_(탠덤_10__3T_12가닥;_뒷면_줄기_홈_→_윗면_→_DB15_뒤)", "Grace_새_세로판_60x120x7_(재출력,_레진_가정),_Ø45_x4_48x48,_위끝_=_웨이퍼_중심_+31", "Grace_2025_앵글_브래킷_\"angle_bracket_for_Ramen_holderSTEP\"_(형상_그대로;_X=z,_Y=x−6,_Z=y)", "M4x12_렌치볼트_x4_(판_뒤에서_몸체_M4_탭으로,_머리_Ø7x4)", "M4x16_볼트_+_너트_x4_(판_아래_구멍_↔_브래킷_세움판_Ø56_구멍_y_2953)"], "beamline_wc_3t": ["셀_몸체_Al_6061_흑색_아노다이징_70x66x10_R4_(포켓_31x31x45_R15,_블록_자리_04,_뒷면_평면_+_M4_x4_48x48,_뒷면_배선_홈)", "PEEK_인서트_(a)_탠덤_308x308x40_C12,_웨이퍼_우물_253x070_+_구석_Ø15_+_핀셋_홈_2,_Mill-Max_0906-1_x4_(±645),_뒤에서_M2_관통탭", "M2x8_접시머리_x2_(몸체_뒤에서_인서트_관통탭으로,_물림_25)", "스프링_핀_Mill-Max_0906-1_x4_(뒷면_패드_±645;_웨이퍼_05에서_09_압축_=_072_N개,_멈춤_링_기준_위치)", "127_mm_4핀_소켓_포락_51x25x4_(가정;_뒷면_줄기_홈_안,_핀_선)", "KIER_웨이퍼_25x25x05_(가정_03–06),_핀에_떠서_멈춤_링에_닿음", "KIER_뒷면_Ag_패드_Ø16_x4_(±645;_크기_가정)", "KIER_앞면_IZO_(마스크_사진_기준)", "KIER_앞면_Ag_(프레임_+_패드_Ø16_at_±643)", "KIER_앞면_MgF2", "M2x4_접시머리_x4_(누름_판,_머리_평면)", "텐트_틀_Al_플랜지_10_(몸체_외곽_70x66,_안쪽_X_-285…249,_Z_±285)_+_벽_25,_5_앞,_+X는_벽_없이_15°_접힘", "CPI_필름_50_µm_텐트_창_(무색_폴리이미드;_대안_PET_12_µm),_틀에_접착", "M2x4_냄비머리_x4_(텐트_플랜지)", "가스_원터치_SMC_KQ2H04-M5_x2_(윗면_X_±19,_Ø2_→_앞면_Z+22로_텐트_안)", "커넥터_브래킷_Al_(밑판_26x18x2_+_판_57x17x2,_뒤로_8_돌출)_+_M3_x2", "M3x6_x2_(브래킷_→_몸체_윗면,_물림_4)", "DB15_(DA-15)_암_판넬형_(뒤_+Y로;_플랜지_391x125,_몸체_31x8x9_가정)", "SMA_판넬_잭_x2_(Ø635x8)", "배선_묶음_Ø29_(탠덤_10__3T_12가닥;_뒷면_줄기_홈_→_윗면_→_DB15_뒤)", "Grace_새_세로판_60x120x7_(재출력,_레진_가정),_Ø45_x4_48x48,_위끝_=_웨이퍼_중심_+31", "Grace_2025_앵글_브래킷_\"angle_bracket_for_Ramen_holderSTEP\"_(형상_그대로;_X=z,_Y=x−6,_Z=y)", "M4x12_렌치볼트_x4_(판_뒤에서_몸체_M4_탭으로,_머리_Ø7x4)", "M4x16_볼트_+_너트_x4_(판_아래_구멍_↔_브래킷_세움판_Ø56_구멍_y_2953)"]};
+const WC_SHARED = {"beamline_wc_single": ["셀_몸체_Al_6061_흑색_아노다이징_70x66x10_R4_(포켓_31x31x45_R15,_블록_자리_04,_뒷면_평면_+_M4_x4_48x48,_뒷면_배선_홈)", "M2x8_접시머리_x2_(몸체_뒤에서_인서트_관통탭으로,_물림_25)", "누름_판_Al_10_40x40_(레이저),_창_20x20_+_홈_6,_+X_03_턱_+_15°_모따기_(X_125부터),_M2_접시_x4", "멈춤_링_PEEK_25x25x05,_창_20_+_같은_홈_(누름_판에_접착,_가정);_웨이퍼_앞면_=_Y_05", "M2x4_접시머리_x4_(누름_판,_머리_평면)", "SHT45_(DFN_15x15)_on_8x6x16_미니_기판_(가정),_몸체_앞면_자리_20_(칩_윗면_Y_−01),_텐트_안_출구_옆", "텐트_틀_Al_플랜지_10_(몸체_외곽_70x66,_안쪽_X_-285…249,_Z_±285)_+_벽_25,_5_앞,_+X는_벽_없이_15°_접힘;_아래_벽_출구_홈_20x10", "CPI_필름_50_µm_텐트_창_(무색_폴리이미드;_대안_PET_12_µm),_틀에_접착", "M2x4_냄비머리_x4_(텐트_플랜지)", "가스_원터치_SMC_KQ2H04-M5_x2_(윗면_X_±19,_Ø2_→_앞면_Z+22로_텐트_안)", "커넥터_브래킷_Al_(밑판_26x18x2_+_판_57x17x2,_뒤로_8_돌출)_+_M3_x2", "M3x6_x2_(브래킷_→_몸체_윗면,_물림_4)", "DB15_(DA-15)_암_판넬형_(뒤_+Y로;_플랜지_391x125,_몸체_31x8x9_가정)", "SMA_판넬_잭_x2_(Ø635x8)", "배선_묶음_Ø34_(탠덤_10__3T_12가닥;_뒷면_줄기_홈_→_윗면_→_DB15_뒤)", "Grace_새_세로판_60x120x7_(재출력,_레진_가정),_Ø45_x4_48x48,_위끝_=_웨이퍼_중심_+31", "Grace_2025_앵글_브래킷_\"angle_bracket_for_Ramen_holderSTEP\"_(형상_그대로;_X=z,_Y=x−6,_Z=y)", "M4x12_렌치볼트_x4_(판_뒤에서_몸체_M4_탭으로,_머리_Ø7x4)", "M4x16_볼트_+_너트_x4_(판_아래_구멍_↔_브래킷_세움판_Ø56_구멍_y_2953)"], "beamline_wc_3t": ["셀_몸체_Al_6061_흑색_아노다이징_70x66x10_R4_(포켓_31x31x45_R15,_블록_자리_04,_뒷면_평면_+_M4_x4_48x48,_뒷면_배선_홈)", "PEEK_인서트_(a)_탠덤_308x308x40_C12,_웨이퍼_우물_253x070_+_구석_Ø15_+_핀셋_홈_2,_Mill-Max_0906-1_x4_(±645),_뒤에서_M2_관통탭", "M2x8_접시머리_x2_(몸체_뒤에서_인서트_관통탭으로,_물림_25)", "스프링_핀_Mill-Max_0906-1_x4_(뒷면_패드_±645;_웨이퍼_05에서_09_압축_=_072_N개,_멈춤_링_기준_위치)", "127_mm_4핀_소켓_포락_51x25x4_(가정;_뒷면_줄기_홈_안,_핀_선)", "KIER_웨이퍼_25x25x05_(가정_03–06),_핀에_떠서_멈춤_링에_닿음", "KIER_뒷면_Ag_패드_Ø16_x4_(±645;_크기_가정)", "KIER_앞면_IZO_(마스크_사진_기준)", "KIER_앞면_Ag_(프레임_+_패드_Ø16_at_±643)", "KIER_앞면_MgF2", "M2x4_접시머리_x4_(누름_판,_머리_평면)", "SHT45_(DFN_15x15)_on_8x6x16_미니_기판_(가정),_몸체_앞면_자리_20_(칩_윗면_Y_−01),_텐트_안_출구_옆", "텐트_틀_Al_플랜지_10_(몸체_외곽_70x66,_안쪽_X_-285…249,_Z_±285)_+_벽_25,_5_앞,_+X는_벽_없이_15°_접힘;_아래_벽_출구_홈_20x10", "CPI_필름_50_µm_텐트_창_(무색_폴리이미드;_대안_PET_12_µm),_틀에_접착", "M2x4_냄비머리_x4_(텐트_플랜지)", "가스_원터치_SMC_KQ2H04-M5_x2_(윗면_X_±19,_Ø2_→_앞면_Z+22로_텐트_안)", "커넥터_브래킷_Al_(밑판_26x18x2_+_판_57x17x2,_뒤로_8_돌출)_+_M3_x2", "M3x6_x2_(브래킷_→_몸체_윗면,_물림_4)", "DB15_(DA-15)_암_판넬형_(뒤_+Y로;_플랜지_391x125,_몸체_31x8x9_가정)", "SMA_판넬_잭_x2_(Ø635x8)", "배선_묶음_Ø34_(탠덤_10__3T_12가닥;_뒷면_줄기_홈_→_윗면_→_DB15_뒤)", "Grace_새_세로판_60x120x7_(재출력,_레진_가정),_Ø45_x4_48x48,_위끝_=_웨이퍼_중심_+31", "Grace_2025_앵글_브래킷_\"angle_bracket_for_Ramen_holderSTEP\"_(형상_그대로;_X=z,_Y=x−6,_Z=y)", "M4x12_렌치볼트_x4_(판_뒤에서_몸체_M4_탭으로,_머리_Ø7x4)", "M4x16_볼트_+_너트_x4_(판_아래_구멍_↔_브래킷_세움판_Ø56_구멍_y_2953)"]};
 const WC_HIDE = /^Grace|^M4x1[26] /, WC_SMP = /^KIER|^단일 셀|^3T mid 창|^3T Ag mid/;
 
 const Sall = { prod: { single: J.defaultState('single'), tandem: J.defaultState('tandem'), tandem3t: J.defaultState('tandem3t') },
@@ -458,9 +458,9 @@ function cardHTML(id) {   // beamline cell v3: its own mounting card, DB15 wirin
   }
   let h = cardHTML0(id);
   if (id === 'wire' && !si) h = '<h2>' + N + (t3 ? 'T–B 선 연결 (DB15)' : '선 연결 (DB15)') + '</h2><p>빔라인 셀은 바늘·핀 선 ' + (t3 ? '10' : '8') +
-    '가닥이 몸체 뒷면 홈을 지나 DB15 하나로 나옵니다 (PCB 없음). DB15 분기 케이블(모델에 없음, 핀 배정 미정)에서 F+·S+(앞 바늘), F−·S−(뒤 핀)를 키슬리에: F+→HI, S+→SENSE HI, F−→LO, S−→SENSE LO.' +
+    '가닥이 몸체 뒷면 홈을 지나 DB15 하나로 나옵니다 (PCB 없음). DB15 분기 케이블(모델에 없음)에서 F+·S+(앞 바늘), F−·S−(뒤 핀)를 키슬리에 (DB15 핀 제안: 1–4 뒷면 핀, 5–8 앞 바늘, 9–12 SHT45 VDD·GND·SDA·SCL, 13 M-F, 14 M-S, 15 PD; 어느 번호가 F/S인지는 미정): F+→HI, S+→SENSE HI, F−→LO, S−→SENSE LO.' +
     (t3 ? ' <b>M-F·M-S(mid 바늘)는 여기 꽂지 않습니다</b> — 다음 단계에서 전압계로.' : '') + '</p>' + h.slice(h.indexOf('<p class="label">키슬리'));
-  if (id === 'wire' && si) h = h.replace('</p>', ' 빔라인 셀 v3.1 싱글은 바늘이 P1·P2에만 닿습니다 (로터리 P1·P2).</p>');
+  if (id === 'wire' && si) h = h.replace('</p>', ' 빔라인 셀 v3.2 싱글은 바늘이 P1·P2에만 닿습니다 (로터리 P1·P2). DB15 핀 제안: 5–8 = P1S, P2S, ITO aF, ITO cS.</p>');
   if (id === 'mid') h = h.replace('(윗판 −y 변 SMA)', '(DB15, mid 바늘 2개)');
   if (id === 'pc' && si) h = h.replace('싱글: 마스크 구멍 2.5 × 2.5 mm', '빔라인 셀 싱글: 마스크 없음 → 화소 전체 ' + J.TRACKS.single.aDev + ' cm² (빛도 화소 전체 → 마스크 측정보다 Voc 조금 높고, 전류가 커져 FF 조금 낮음; 예시 계산)');
   return h;
@@ -586,7 +586,7 @@ function turn(k, d) {
   else st.knobs[k] = Math.max(-1.5, t);
   if (STEPS[track][cur][0] === 'knob') render(); changed();
 }
-function setJig(m) {   // 제작 지그 | 빔라인 셀 v3.1: separate states and results per jig
+function setJig(m) {   // 제작 지그 | 빔라인 셀 v3.2: separate states and results per jig
   jigMode = m; S = Sall[m]; last = Lall[m]; STEPS = m === 'bl' ? STEPS_BL : STEPS_PROD;
   for (const k of ['prod', 'bl']) $('jg-' + k).setAttribute('aria-pressed', String(m === k));
   $('jgnote').hidden = m !== 'bl';
@@ -862,7 +862,7 @@ const LABELS = [
   ['스위치 박스', () => cad(0, 120, BZ + 70), () => track === 'single'],
   ['램프', () => cad(0, 0, 385), () => true], ['PC', () => cad(-190, 260, BZ + 175), () => true], ['기준 셀', () => cad(-90, -20, BZ + 18), () => true],
   ['노브 1', () => cad(18, 18, 22), () => track !== 'single' && jigMode !== 'bl'], ['노브 2', () => cad(-18, -18, 22), () => track !== 'single' && jigMode !== 'bl'],
-  ['DB15 (빔라인 셀 v3.1)', () => cad(...((jig && jig.db15W) || [0, 0, 0])).add(new THREE.Vector3(0, 10, 0)), () => jigMode === 'bl'],
+  ['DB15 (빔라인 셀 v3.2)', () => cad(...((jig && jig.db15W) || [0, 0, 0])).add(new THREE.Vector3(0, 10, 0)), () => jigMode === 'bl'],
   ['전압계 (T–M = V_PVK, I ≈ 0)', () => cad(D.x, D.front - 5, BZ + 62), () => track === 'tandem3t'],
   ['M-F·M-S (−y)', () => cad(0, -40, 14), () => track === 'tandem3t' && jigMode !== 'bl'],
 ];
