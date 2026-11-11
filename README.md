@@ -24,3 +24,5 @@ v3.3에서 바뀐 것: SHT45를 셀 밖 배기 T관(PETG, 관으로 40 mm 아래
 탠덤 제작 지그(받침·TB·아래 프레임·핀·노브·스프링·맞춤핀)를 그대로 두고 윗판 TT 자리에 Al 6061 틀 2.0 mm를 얹은 in-situ 셀. 틀 아래 Al 0.4 캐리어에 Kapton 25 µm 창(Ø15 + x 방향 10.6 mm 슬롯)이 붙어 시료 앞면 위 1.0 mm에 온다(틀 자체는 Mill-Max 0906 작동 높이 때문에 3.6 mm 아래로 못 내려옴). N₂/He 바브 SMC M-5AU-4 ±y(밀봉 없음, 약한 양압), 광 바이어스 −x 45° Ø6 보어, 형광 검출기 +x 60°(45–75° 시야 0 차단, 광선 추적 9/9), SMA F+ −x / S+ +x를 TB 가장자리로 내리고 F−·S−는 +y 그대로, 스테이션 판의 M6 50 mm 정사각은 빔라인 스테이지 패턴 자리 표시. 모든 bc_ 치수는 10/26 가정이며 부품 간 겹침 0(72 부품). 페이지: [3D 보기 (빔라인 셀 버튼)](https://donghyeonlee98.github.io/jig-3d/) — 표시 토글의 광선은 이 모델에서만 X선 −z(빨강)·광 −x 45°(주황)·검출기 축 +x 60°(파랑)으로 그린다.
 
 2026-11-05: 빔라인 셀의 최신 판(v4.8)은 별도 페이지 https://donghyeonlee98.github.io/beamline-cell-3d/ 에서 본다. 이 페이지의 v3.3 모델은 이전 판 기록이다. jig_models.js가 15.6 MB라 v4.8 GLB를 더 넣지 못했다.
+
+2026-11-12: 빔라인 셀 최신 판은 v8.2b r8(발주 세트 r8, 문제점 표시)이다: https://donghyeonlee98.github.io/beamline-cell-3d/v82r8.html (첫 화면도 같은 내용). 이전 판은 v6.2c https://donghyeonlee98.github.io/beamline-cell-3d/v62c.html , v4.8 https://donghyeonlee98.github.io/beamline-cell-3d/v48.html 에 남겨 두었다.
