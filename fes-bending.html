@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FES 가열 굽힘 장치 3D</title>
+<style>
+  :root { --ink:#1d2a33; --mut:#5b6b75; --line:#d5dde2; --acc:#1f6b45; --bg:#f4f6f7; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'IBM Plex Sans KR', 'Malgun Gothic', system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+  header { padding:10px 14px; background:#fff; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:6px 14px; align-items:baseline; }
+  header h1 { font-size:16px; margin:0; }
+  header a { font-size:13px; color:var(--acc); }
+  #wrap { display:flex; flex-wrap:wrap; }
+  #stage { position:relative; flex:1 1 560px; min-height:420px; height:calc(100vh - 52px); background:linear-gradient(#e9eef1,#cfd8de); overflow:hidden; }
+  #stage canvas { display:block; width:100%; height:100%; touch-action:none; }
+  #msg { position:absolute; left:10px; bottom:10px; right:10px; font-size:12px; color:#fff; background:rgba(20,30,36,.78); padding:6px 9px; border-radius:6px; pointer-events:none; }
+  .badge { position:absolute; width:20px; height:20px; margin:-10px 0 0 -10px; border-radius:50%; background:#1f6b45; color:#fff; font-size:11px; font-weight:700; line-height:20px; text-align:center; border:1px solid #fff; cursor:pointer; user-select:none; }
+  .badge.on { background:#d4380d; }
+  #panel { flex:0 0 340px; max-width:100%; padding:12px 14px 30px; background:#fff; border-left:1px solid var(--line); overflow:auto; max-height:calc(100vh - 52px); }
+  #panel h2 { font-size:13px; margin:14px 0 6px; color:var(--mut); letter-spacing:.02em; }
+  .row { display:flex; align-items:center; gap:8px; font-size:13px; margin:5px 0; }
+  .row input[type=range] { flex:1; }
+  button { font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; }
+  button:active, button.act { background:#e1efe7; border-color:#7fb596; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; }
+  .note { font-size:12px; color:var(--mut); line-height:1.55; }
+  .note b { color:var(--ink); }
+  .pl { list-style:none; margin:0; padding:0; }
+  .pl li { display:flex; align-items:center; gap:7px; font-size:13px; padding:4px 3px; border-radius:5px; cursor:pointer; }
+  .pl li:hover { background:#f0f4f6; }
+  .pl li.sel { background:#fde9e3; }
+  .pl .sw { width:12px; height:12px; border-radius:3px; border:1px solid #0003; flex:0 0 auto; }
+  .pl .no { width:18px; color:var(--mut); font-size:12px; text-align:right; }
+  .pl input { margin:0; }
+  #info { font-size:13px; line-height:1.6; background:#f7f9fa; border:1px solid var(--line); border-radius:6px; padding:8px 10px; }
+  #live { font-size:13px; background:#eef6f1; border:1px solid #cfe3d6; border-radius:6px; padding:7px 10px; line-height:1.6; }
+  @media (max-width: 760px) {
+    #stage { flex-basis:100%; height:62vh; min-height:340px; }
+    #panel { flex-basis:100%; border-left:none; border-top:1px solid var(--line); max-height:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>FES 가열 굽힘 장치 3D</h1>
+  <a href="index.html">← 측정 지그 3D 첫 화면</a>
+</header>
+<div id="wrap">
+  <div id="stage"><div id="msg">끌어서 회전, 두 손가락(또는 휠)으로 확대, 부품이나 번호를 누르면 설명이 나옵니다.</div></div>
+  <div id="panel">
+    <h2>판 간격 (움직이는 판을 옮김)</h2>
+    <div class="btns">
+      <button id="b-flat">편 상태 (간격 50 mm)</button>
+      <button id="b-bent">굽힌 상태 (간격 26 mm)</button>
+    </div>
+    <div class="row"><span style="width:34px">간격</span><input id="gap" type="range" min="26" max="50" step="0.5" value="26"><span id="gapv" style="width:58px;text-align:right">26 mm</span></div>
+    <div id="live"></div>
+    <h2>보는 방향</h2>
+    <div class="btns">
+      <button data-v="side">옆에서 (시료 단면)</button><button data-v="top">위에서</button><button data-v="iso">비스듬히</button><button data-v="all">전체</button>
+      <button id="b-badge" class="act">번호 표시</button>
+    </div>
+    <h2>부품 목록 (이름을 누르면 강조, 네모는 켜기/끄기)</h2>
+    <ul class="pl" id="pl"></ul>
+    <h2>누른 부품</h2>
+    <div id="info">목록이나 모델에서 부품을 누르면 이름과 하는 일이 여기에 나옵니다.</div>
+    <h2>알아둘 것</h2>
+    <div class="note">
+      <b>가정한 치수(실측 아님):</b> 판 폭 약 110 mm와 높이 약 90 mm(11/19 사진에서 읽음, ±5 mm), 판 두께 위 10 mm·아래 20 mm, 시료 끝이 판에 붙는 높이(윗변에서 약 37 mm 아래)와 아치 꼭대기 위치, 셀과 센서가 시료 어디에 있는지, 셀의 가로세로 방향, 바닥판·받침의 크기, 은 페이스트 띠 폭 6.5 mm, 탭·히터를 붙이는 높이.<br>
+      시료는 길이 50 mm가 그대로이고 간격 26 mm에서 곡률반지름이 약 15 mm가 되도록 그린 모양이다(실제 휜 모양은 아님). 필름 두께는 면으로만 그렸다. 전선 굵기와 Keithley 상자 크기는 보기용이다.<br>
+      조절 기판은 FES_HCTRL2의 부품 배치(11/22 렌더)를 따르되 히터 단자 세 쌍을 FFC 커넥터 하나로 바꾼 모양(v3 계획, 아직 설계 안 끝남)이다. 사진과 위아래가 반대로 놓여 있다.
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+(function () {
+'use strict';
+const DESK = -18, BT = DESK + 1.6;          // desk surface, top face of a bare PCB lying on it
+const PW = 110, PH = 90;                    // plate width along the bending axis, plate height
+const E = 22.3, YE = 53.3, L0 = 50;         // heater extension below sample end, sample end height, sample length
+const THK_SAMPLE = 0.26;
+
+// ------------------------------------------------------------------ parts
+const PARTS = {};
+const ORDER = [];
+function part(id, no, name, color, note) { PARTS[id] = { id, no, name, color, note, mats: [], meshes: [], vis: true, anchor: new THREE.Vector3() }; ORDER.push(id); }
+part('base', 1, '바닥판과 받침', '#2a2a2e', '굽힘 장치의 바닥판과 판을 받치는 블록이다. 움직이는 판 쪽 블록이 바닥판 위를 미끄러져 간격이 바뀐다. 크기는 가정(사진으로 어림).');
+part('fixed', 2, '고정판 (검은 아노다이징 알루미늄)', '#1c1c1f', '움직이지 않는 판. 단면이 쐐기 모양(위 10 mm, 아래 20 mm)이고 안쪽 면은 수직이다. 시료 한쪽 끝, 접촉 탭, 히터 한쪽 끝이 이 안쪽 면에 테이프로 붙는다. 높이 약 90 mm, 폭 약 110 mm (가정).');
+part('moving', 3, '움직이는 판', '#1c1c1f', '간격을 50 mm에서 26 mm로 줄이는 판. 시료와 히터의 반대쪽 끝이 붙어 있어서, 판이 다가오면 시료와 히터가 위로 불룩하게 휜다.');
+part('tape', 4, '양면테이프', '#d6d6d6', '시료 끝과 히터 끝을 판 안쪽 면에 붙이는 투명 테이프. 히터 쪽은 내열(PI) 테이프를 쓸 계획이다. 붙이는 높이는 가정.');
+part('sample', 5, '시료 (PEN 필름 50 × 50 mm, 0.26 mm)', '#cfdbe6', '굽힘 시험을 받는 유연 페로브스카이트 태양전지. 양 끝이 두 판에 붙고 가운데가 위로 휜다. 빛은 위에서 들어온다. 셀과 은 띠는 아치 안쪽 면에 있는 것으로 그렸다(반투명으로 비침, 가정).');
+part('band', 6, '은 페이스트 띠 (폭 6.5 mm × 2)', '#c9ced3', '시료 양 끝 가장자리를 따라 바른 은 띠. 셀의 전극을 끌어내어 접촉 탭이 닿는 자리이다. 폭 6.5 mm는 가정값(사용자 11/21).');
+part('cell', 7, '셀 (16 × 10 mm)', '#1b2430', '시료 가운데의 작은 셀. 전류·전압(J-V)은 이 셀에서 잰다. 가로세로 방향은 가정.');
+part('heater', 8, '가열 필름 (히터, 폭 54 mm, 폴리이미드)', '#e8850c', '시료 안쪽에 1.5 mm 떨어져 같이 휘는 구리 히터(FES_FLEX3 계열). 양 끝은 두 판 안쪽 면에 시료 끝보다 약 22 mm 아래에 붙는다. 가운데 26 mm(진한 노랑)와 양 끝 10 mm씩(주황)은 가열 구간 세 칸이며, 가운데 구간 저항으로 셀 자리 온도를 읽는다. 옆으로 나온 꼬리(폭 11 mm)는 고정판 면을 따라 조절 기판으로 간다.');
+part('tab', 9, '접촉 탭 2개 (12 × 80 mm 폴리이미드, 금 패드)', '#d9b36c', '은 띠 끝에 한쪽을 붙이고, 꼬리는 옆으로 나와 판 면에 테이프로 붙은 뒤 끝의 금 패드 두 개(전류·전압용)에 클립을 문다. 고정판 쪽은 +, 움직이는 판 쪽은 −로 그렸다.');
+part('clip', 10, '클립 선 4가닥', '#c8201a', '탭 끝 패드를 물고 Keithley로 가는 선. 판이 움직여도 늘어나지 않게 여유를 둔다(굵기는 보기용).');
+part('keithley', 11, 'Keithley 2400 (4단자)', '#d9dde0', '전압을 걸고 전류를 재는 소스미터. 4단자(전류 2선·전압 2선)로 연결해 선 저항을 뺀다. 상자 크기는 보기용.');
+part('pt100', 12, '온도 센서 PT100 칩 (2.3 × 2.0 mm)', '#4a4f55', '시료 뒷면, 셀 옆에 붙인 얇은 막 백금 저항. 위치는 가정. 가는 선 두 가닥으로 MAX31865에 간다.');
+part('max', 13, 'MAX31865 모듈 (약 25 × 28 mm)', '#1f4fa8', 'PT100의 저항을 읽는 변환 모듈. 조절 기판의 8핀 소켓에 꽂는다.');
+part('ctrl', 14, '조절 기판 FES_HCTRL (92 × 62 mm)', '#2f5a36', '히터 전력(PWM)과 온도 읽기를 맡는 기판. 모양은 FES_HCTRL2 렌더를 따랐고, 히터는 FFC 커넥터에 꽂는 것으로 바꿨다(v3 계획).');
+part('mega', 15, '아두이노 메가 2560 (101.5 × 53.3 mm)', '#0e7c86', '온도 조절 프로그램이 도는 보드. 기판과는 점퍼선으로 연결한다(선은 그리지 않음).');
+part('light', 16, '빛 (위에서 입사)', '#ffe27a', '위에서 시료로 들어오는 빛(태양모사기 또는 램프). 굽힌 채 측정하는 쪽이 아니라 굽히는 동안 빛을 받는 조건을 나타낸 그림이다.');
+
+const REG = new THREE.Group();
+function M(pid, o) {
+  o = o || {};
+  const m = new THREE.MeshStandardMaterial(Object.assign({ color: PARTS[pid].color, metalness: 0.12, roughness: 0.55 }, o));
+  m.userData.op = m.opacity; m.userData.tr = m.transparent;
+  PARTS[pid].mats.push(m);
+  return m;
+}
+function mesh(pid, geo, mat, parent) {
+  const m = new THREE.Mesh(geo, mat);
+  m.userData.part = pid; PARTS[pid].meshes.push(m);
+  (parent || scene).add(m);
+  return m;
+}
+function box(pid, x0, y0, z0, dx, dy, dz, mat, parent) { // corner + size
+  const m = mesh(pid, new THREE.BoxGeometry(dx, dy, dz), mat, parent);
+  m.position.set(x0 + dx / 2, y0 + dy / 2, z0 + dz / 2); return m;
+}
+function cyl(pid, r, h, mat, parent, seg) { return mesh(pid, new THREE.CylinderGeometry(r, r, h, seg || 20), mat, parent); }
+
+// ------------------------------------------------------------------ scene
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+stage.insertBefore(renderer.domElement, stage.firstChild);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0xdde4e8);
+const camera = new THREE.PerspectiveCamera(32, 1, 5, 3000);
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a0, 0.7));
+const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(120, 300, 200); scene.add(dl);
+const dl2 = new THREE.DirectionalLight(0xffffff, 0.35); dl2.position.set(-200, 120, -150); scene.add(dl2);
+
+function textTex(lines, w, h, bg, fg, px) {
+  const c = document.createElement('canvas'); c.width = w * px; c.height = h * px;
+  const g = c.getContext('2d');
+  if (bg) { g.fillStyle = bg; g.fillRect(0, 0, c.width, c.height); }
+  g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const n = lines.length;
+  lines.forEach((t, i) => { g.font = 'bold ' + Math.round(c.height / (n + 0.7) * (i ? 0.62 : 0.85)) + 'px "Malgun Gothic", sans-serif'; g.fillText(t, c.width / 2, c.height * (i + 0.6) / (n + 0.2)); });
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+}
+function label(pid, lines, w, h, bg, fg, parent) {
+  const m = new THREE.MeshBasicMaterial({ map: textTex(lines, w, h, bg, fg, 12), transparent: true });
+  m.userData.op = 1; m.userData.tr = true; PARTS[pid].mats.push(m);
+  return mesh(pid, new THREE.PlaneGeometry(w, h), m, parent);
+}
+
+// desk
+{
+  const d = new THREE.Mesh(new THREE.PlaneGeometry(1600, 1400), new THREE.MeshStandardMaterial({ color: 0x6f7c85, roughness: 0.95 }));
+  d.rotation.x = -Math.PI / 2; d.position.set(60, DESK - 0.05, 80); scene.add(d);
+}
+
+// ------------------------------------------------------------------ machine
+const matBase = M('base', { color: '#2a2a2e', roughness: 0.5 });
+const matScrew = M('base', { color: '#c4c8cc', metalness: 0.8, roughness: 0.3 });
+const matPlate = M('fixed', { color: '#1c1c1f', roughness: 0.42, metalness: 0.25 });
+const matPlateM = M('moving', { color: '#1c1c1f', roughness: 0.42, metalness: 0.25 });
+const matTape = M('tape', { color: '#e8ecee', transparent: true, opacity: 0.4, depthWrite: false });
+box('base', -75, DESK, -80, 200, 6, 160, matBase);
+const fixedBlock = box('base', -44, -12, -62, 50, 12, 124, matBase);
+function wedge(sign) {
+  const s = new THREE.Shape();
+  s.moveTo(0, 0); s.lineTo(sign * 20, 0); s.lineTo(sign * 10, PH); s.lineTo(0, PH); s.closePath();
+  const g = new THREE.ExtrudeGeometry(s, { depth: PW, bevelEnabled: false });
+  g.translate(0, 0, -PW / 2); return g;
+}
+function edges(m) { const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x5a5f66, transparent: true, opacity: 0.55 })); m.add(e); }
+const fixedPlate = mesh('fixed', wedge(-1), matPlate); edges(fixedPlate);
+const mov = new THREE.Group(); scene.add(mov);
+const movBlock = box('base', -6, -12, -62, 50, 12, 124, matBase, mov);
+const movPlate = mesh('moving', wedge(1), matPlateM, mov); edges(movPlate);
+[[-33, -45], [-33, 45]].forEach(p => { const s = cyl('base', 3.4, 3, matScrew, null, 20); s.position.set(p[0], 1.5, p[1]); });
+[[33, -45], [33, 45]].forEach(p => { const s = cyl('base', 3.4, 3, matScrew, mov, 20); s.position.set(p[0], 1.5, p[1]); });
+// tapes (static, faces at x=0 and local x=0)
+box('tape', 0, 46, -28, 0.15, 14, 56, matTape);
+box('tape', 0, 27, -29, 0.15, 9, 58, matTape);
+box('tape', -0.15, 46, -28, 0.15, 14, 56, matTape, mov);
+box('tape', -0.15, 27, -29, 0.15, 9, 58, matTape, mov);
+// tab-tail tape across the plate face, z 29..50
+box('tape', 0, 42, 30, 0.15, 14, 20, matTape);
+box('tape', -0.15, 42, 30, 0.15, 14, 20, matTape, mov);
+
+// ------------------------------------------------------------------ path of the film (x,y), travel: up fixed face, over the arch, down moving face
+function buildPath(g) {
+  const a = 9.25 * (50 - g) / 24;
+  const Larc = L0 - 2 * a;
+  const x0 = 0.15, x1 = g - 0.15, W = x1 - x0;
+  let th = 0;
+  const r = Math.min(1, W / Larc);
+  if (r < 0.99999) { let lo = 1e-6, hi = Math.PI / 2 + 0.6; for (let i = 0; i < 60; i++) { const m = (lo + hi) / 2; if (Math.sin(m) / m > r) lo = m; else hi = m; } th = (lo + hi) / 2; }
+  let pts = [];
+  const push = (x, y) => pts.push([x, y]);
+  for (let y = YE - E; y < YE; y += 0.5) push(x0, y);
+  for (let y = YE; y < YE + a; y += 0.5) push(x0, y);
+  const yA = YE + a;
+  if (th < 1e-5) { for (let x = x0; x < x1; x += 0.5) push(x, yA); }
+  else {
+    const R = Larc / (2 * th), yc = yA - R * Math.cos(th), n = Math.ceil(Larc / 0.5);
+    for (let i = 0; i < n; i++) { const f = -th + 2 * th * i / n; push((x0 + x1) / 2 + R * Math.sin(f), yc + R * Math.cos(f)); }
+  }
+  for (let y = yA; y > YE; y -= 0.5) push(x1, y);
+  for (let y = YE; y >= YE - E; y -= 0.5) push(x1, y);
+  for (let it = 0; it < 22; it++) { const q = pts.map(p => p.slice()); for (let i = 1; i < pts.length - 1; i++) { q[i][0] = 0.5 * pts[i][0] + 0.25 * (pts[i - 1][0] + pts[i + 1][0]); q[i][1] = 0.5 * pts[i][1] + 0.25 * (pts[i - 1][1] + pts[i + 1][1]); } pts = q; }
+  // resample uniformly
+  const S = [0]; for (let i = 1; i < pts.length; i++) S.push(S[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  const Lt = S[S.length - 1], N = Math.round(Lt / 0.5), ds = Lt / N, P = [];
+  let k = 0;
+  for (let i = 0; i <= N; i++) { const s = i * ds; while (k < S.length - 2 && S[k + 1] < s) k++; const f = (s - S[k]) / (S[k + 1] - S[k] || 1); P.push([pts[k][0] + f * (pts[k + 1][0] - pts[k][0]), pts[k][1] + f * (pts[k + 1][1] - pts[k][1])]); }
+  const Nm = P.map((p, i) => { const q = P[Math.max(0, i - 1)], r2 = P[Math.min(N, i + 1)]; let tx = r2[0] - q[0], ty = r2[1] - q[1]; const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l; return [ty, -tx, tx, ty]; });
+  const R = th < 1e-5 ? Infinity : Larc / (2 * th);
+  return { P, Nm, Lt, ds, N, R, a, th };
+}
+function at(path, s, d) {
+  let i = s / path.ds; i = Math.max(0, Math.min(path.N - 1e-9, i)); const k = Math.floor(i), f = i - k;
+  const p0 = path.P[k], p1 = path.P[k + 1], n0 = path.Nm[k], n1 = path.Nm[k + 1];
+  let nx = n0[0] + f * (n1[0] - n0[0]), ny = n0[1] + f * (n1[1] - n0[1]); const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+  return { x: p0[0] + f * (p1[0] - p0[0]) + nx * d, y: p0[1] + f * (p1[1] - p0[1]) + ny * d, nx, ny, tx: -ny, ty: nx };
+}
+function ribbon(path, s0, s1, z0, z1, dFn, colFn, step) {
+  const n = Math.max(2, Math.round((s1 - s0) / (step || 0.5)));
+  const pos = [], col = [], idx = [];
+  for (let i = 0; i <= n; i++) {
+    const s = s0 + (s1 - s0) * i / n, p = at(path, s, 0), d = dFn(s);
+    const c = colFn ? colFn(s) : [1, 1, 1];
+    pos.push(p.x + p.nx * d, p.y + p.ny * d, z0, p.x + p.nx * d, p.y + p.ny * d, z1);
+    col.push(c[0], c[1], c[2], c[0], c[1], c[2]);
+    if (i) { const b = 2 * (i - 1); idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); }
+  }
+  return mkgeo(pos, col, idx);
+}
+function patch(path, zs, sLo, sHi, d, mirror, nS) {
+  const pos = [], idx = [];
+  zs.forEach((z, r) => {
+    for (let j = 0; j <= nS; j++) {
+      const sl = sLo(z) + (sHi(z) - sLo(z)) * j / nS;
+      const sp = mirror ? path.Lt - E - sl : E + sl, p = at(path, sp, d);
+      pos.push(p.x, p.y, z);
+    }
+    if (r) { for (let j = 0; j < nS; j++) { const a = (r - 1) * (nS + 1) + j, b = a + 1, c = r * (nS + 1) + j, e = c + 1; idx.push(a, b, c, b, e, c); } }
+  });
+  return mkgeo(pos, null, idx);
+}
+function mkgeo(pos, col, idx) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  if (col) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx); g.computeVertexNormals(); return g;
+}
+function lin(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+
+// ------------------------------------------------------------------ dynamic film parts
+const D = {};
+const dm = { side: THREE.DoubleSide };
+D.sample = mesh('sample', new THREE.BufferGeometry(), M('sample', Object.assign({ transparent: true, opacity: 0.5, depthWrite: false, roughness: 0.15 }, dm)));
+D.sample.renderOrder = 5;
+D.band1 = mesh('band', new THREE.BufferGeometry(), M('band', Object.assign({ metalness: 0.7, roughness: 0.3 }, dm)));
+D.band2 = mesh('band', new THREE.BufferGeometry(), D.band1.material);
+D.cell = mesh('cell', new THREE.BufferGeometry(), M('cell', Object.assign({ roughness: 0.25 }, dm)));
+D.heater = mesh('heater', new THREE.BufferGeometry(), M('heater', Object.assign({ vertexColors: true, color: '#ffffff', roughness: 0.5 }, dm)));
+const matTab = M('tab', Object.assign({ roughness: 0.5 }, dm)), matPad = M('tab', Object.assign({ color: '#ffcf3a', metalness: 0.9, roughness: 0.25 }, dm));
+D.tabL = mesh('tab', new THREE.BufferGeometry(), matTab); D.tabR = mesh('tab', new THREE.BufferGeometry(), matTab);
+D.padsL = [0, 1, 2, 3].map(() => mesh('tab', new THREE.BufferGeometry(), matPad));
+D.padsR = [0, 1, 2, 3].map(() => mesh('tab', new THREE.BufferGeometry(), matPad));
+D.tail = mesh('heater', new THREE.BufferGeometry(), M('heater', Object.assign({ color: '#f2c14e', roughness: 0.5 }, dm)));
+// PT100 chip
+const chip = new THREE.Group(); scene.add(chip);
+{
+  const mb = M('pt100', { color: '#3d4349', roughness: 0.4 }), mp = M('pt100', { color: '#cfd3d6', metalness: 0.9, roughness: 0.3 });
+  box('pt100', -1.15, 0, -1, 2.3, 0.6, 2, mb, chip);
+  box('pt100', -1.15, 0, -1, 0.5, 0.65, 2, mp, chip); box('pt100', 0.65, 0, -1, 0.5, 0.65, 2, mp, chip);
+}
+const matLead = M('pt100', { color: '#b0b4b8', metalness: 0.8, roughness: 0.3 });
+D.leadP = [0, 1].map(() => mesh('pt100', new THREE.BufferGeometry(), matLead));
+// light
+const matBeam = M('light', { color: '#ffe27a', transparent: true, opacity: 0.1, depthWrite: false });
+const matArrow = M('light', { color: '#f5b800', roughness: 0.5 });
+D.beam = mesh('light', new THREE.BoxGeometry(1, 1, 1), matBeam);
+D.arrows = [-16, 0, 16].map(zz => { const gp = new THREE.Group(); const sh = cyl('light', 1.2, 14, matArrow, gp, 8); sh.position.y = 8; const cn = mesh('light', new THREE.ConeGeometry(3.4, 8, 12), matArrow, gp); cn.rotation.x = Math.PI; cn.position.y = -2; gp.position.z = zz; scene.add(gp); return gp; });
+// clip leads
+const clipMats = [M('clip', { color: '#c8201a' }), M('clip', { color: '#e87a8c' }), M('clip', { color: '#1a1a1a' }), M('clip', { color: '#6e7479' })];
+const clipJaw = M('clip', { color: '#2b2b2b', metalness: 0.6, roughness: 0.4 });
+D.clipBody = [0, 1, 2, 3].map(() => mesh('clip', new THREE.BoxGeometry(5, 3.6, 9), clipJaw));
+D.clipLead = [0, 1, 2, 3].map(i => mesh('clip', new THREE.BufferGeometry(), clipMats[i]));
+
+// ------------------------------------------------------------------ Keithley
+const KX = 110, KZ0 = 60, KZ1 = 165, KH = 70;
+{
+  const mb = M('keithley', { color: '#b4bbc1', roughness: 0.7 }), mf = M('keithley', { color: '#3a4047', roughness: 0.5 });
+  box('keithley', KX, DESK, KZ0, 150, KH, KZ1 - KZ0, mb);
+  box('keithley', KX - 0.5, DESK + 4, KZ0 + 3, 0.6, KH - 8, KZ1 - KZ0 - 6, mf);
+  const lb = label('keithley', ['Keithley 2400 (4단자)', '소스미터'], 70, 18, '#3a4047', '#ffffff'); lb.rotation.y = -Math.PI / 2; lb.position.set(KX - 1.2, DESK + KH - 14, (KZ0 + KZ1) / 2 + 20);
+  const sc = M('keithley', { color: '#0f1a22', roughness: 0.2 }); box('keithley', KX - 1.2, DESK + KH - 38, KZ0 + 8, 0.6, 16, 40, sc);
+}
+const JACK = [[78, 'F+', '#c8201a'], [90, 'S+', '#e87a8c'], [130, 'F−', '#1a1a1a'], [142, 'S−', '#6e7479']];
+const JY = DESK + 22;
+JACK.forEach((j, i) => { const c = cyl('keithley', 3.2, 4, M('keithley', { color: j[2], roughness: 0.4 }), null, 18); c.rotation.z = Math.PI / 2; c.position.set(KX - 2, JY, j[0]); const l = label('keithley', [j[1]], 9, 5, null, '#1d2a33'); l.rotation.y = -Math.PI / 2; l.position.set(KX - 0.9, JY - 6.5, j[0]); });
+
+// ------------------------------------------------------------------ controller board (FES_HCTRL, v2 layout, board rotated 180 deg: x = 48 - u, z = 104 + v)
+const ctrl = new THREE.Group(); scene.add(ctrl);
+const bx = u => 48 - u, bz = v => 104 + v;
+function bbox(pid, u0, v0, du, dv, h, mat, y0) { // footprint in board coords (u0..u0+du, v0..v0+dv)
+  return box(pid, bx(u0 + du), (y0 === undefined ? BT : y0), bz(v0), du, h, dv, mat);
+}
+{
+  const mG = M('ctrl', { color: '#2f5a36', roughness: 0.6 }), mBlk = M('ctrl', { color: '#1b1b1d', roughness: 0.5 }), mSil = M('ctrl', { color: '#cfd3d6', metalness: 0.9, roughness: 0.3 });
+  const mGold = M('ctrl', { color: '#e7b73c', metalness: 0.9, roughness: 0.3 }), mBr = M('ctrl', { color: '#8a5a3a', roughness: 0.5 }), mTer = M('ctrl', { color: '#3d444b', roughness: 0.5 }), mFFC = M('ctrl', { color: '#e9e2cf', roughness: 0.6 });
+  box('ctrl', bx(92), DESK, bz(0), 92, 1.6, 62, mG);
+  bbox('ctrl', 2.4, 34.7, 2.8, 20.4, 8.5, mBlk);              // 8-pin power/I2C header
+  bbox('ctrl', 15.7, 55, 15.3, 2.8, 8.5, mBlk);               // 6-pin SPI header
+  bbox('ctrl', 10.7, 46.7, 20.3, 2.6, 8.5, mBlk);             // MAX31865 socket
+  bbox('ctrl', 48.7, 42.4, 10.2, 2.9, 8.5, mBlk);             // 4-pin RTD header
+  bbox('ctrl', 8.3, 0.6, 8.2, 13.8, 8, mTer);                 // GND / VIN terminal
+  bbox('ctrl', 25.8, 0.6, 8.2, 13.8, 8, mTer);                // TCO terminal
+  bbox('ctrl', 64, 47.4, 8.5, 13.9, 8, mTer); bbox('ctrl', 72.5, 47.4, 7.9, 13.9, 8, mTer); // RTD terminals
+  bbox('ctrl', 41, 0.8, 14, 6.4, 2.6, mFFC);                  // FFC connector (planned, replaces 3 heater terminals)
+  bbox('ctrl', 41.6, 1.2, 12.8, 2.2, 3.0, mBlk);              // FFC flip lock
+  // SMD parts read off the 11/22 render (px -> mm)
+  const U = px => (px - 205) / 12.58, V = py => (977 - py) / 12.58;
+  const smd = [[521, 500, 2, 1.3, 'r'], [521, 538, 2, 1.3, 'r'], [595, 500, 2.6, 2.1, 'j'], [595, 537, 2.6, 2.1, 'j'], [707, 555, 2.6, 2.1, 'j'], [583, 750, 2.6, 2.1, 'j'], [507, 625, 3.4, 5.4, 'd'], [500, 683, 1.7, 3, 's'], [575, 683, 6.3, 3.2, 'b'], [657, 683, 1.7, 3, 's'], [745, 683, 5, 3.2, 'k'], [393, 683, 6.3, 3.4, 'f'], [640, 610, 1.3, 2, 'r'], [668, 610, 1.3, 2, 'r'], [725, 612, 1.7, 3, 's'], [770, 618, 1.3, 2, 'r'], [798, 618, 1.3, 2, 'r'], [912, 482, 1.3, 2, 'r'], [910, 560, 1.3, 2, 'r'], [909, 610, 1.3, 2, 'r'], [1124, 716, 1.3, 2, 'r'], [1160, 716, 1.3, 2, 'r'], [1124, 858, 1.3, 2, 'r'], [1160, 858, 1.3, 2, 'r'], [1074, 750, 2, 1.3, 'r'], [1074, 826, 2, 1.3, 'r'], [920, 745, 2, 1.3, 'r'], [1300, 783, 2, 1.3, 'r'], [845, 497, 4, 4, 'i'], [1237, 783, 4.2, 4.2, 'i']];
+  smd.forEach(s => {
+    const k = s[4], u = U(s[0]) - s[2] / 2, v = V(s[1]) - s[3] / 2;
+    const mt = { r: mBlk, j: mGold, d: mBlk, s: mBlk, b: mBr, k: mBlk, f: mSil, i: mBlk }[k];
+    bbox('ctrl', u, v, s[2], s[3], k === 'j' ? 0.15 : (k === 'i' ? 1.2 : 0.9), mt);
+  });
+  [[1237, 865], [1287, 865], [978, 745]].forEach(p => bbox('ctrl', U(p[0]) - 1.2, V(p[1]) - 1.2, 2.4, 2.4, 0.15, mGold)); // test pads
+  const lb = label('ctrl', ['FES_HCTRL'], 30, 5, null, '#f1f1e8'); lb.rotation.x = -Math.PI / 2; lb.position.set(bx(33), BT + 0.05, bz(40));
+  const lb2 = label('ctrl', ['히터 FFC'], 16, 4, null, '#f1f1e8'); lb2.rotation.x = -Math.PI / 2; lb2.position.set(bx(48), BT + 0.05, bz(10));
+}
+// MAX31865 module standing in the socket (u 10.7..31, v 46.7..49.3)
+{
+  const mb = M('max', { color: '#1f4fa8', roughness: 0.5 }), mc = M('max', { color: '#1a1a1c' }), mp = M('max', { color: '#cfd3d6', metalness: 0.9, roughness: 0.3 });
+  const cx = bx(20.85), cz = bz(48);
+  box('max', cx - 12.5, BT + 7, cz - 0.8, 25, 28, 1.6, mb);
+  box('max', cx - 10.2, BT + 5, cz - 1.25, 20.3, 2.2, 2.5, mc);
+  box('max', cx - 3, BT + 19, cz + 0.8, 6, 0.9, 6, mc);
+  box('max', cx - 9, BT + 28, cz + 0.8, 5, 3, 7.5, mc);
+  const lb = label('max', ['MAX31865'], 16, 4, null, '#ffffff'); lb.position.set(cx, BT + 13, cz + 0.85);
+}
+// Arduino Mega 2560 outline, long side along x, centre z 203
+{
+  const mt = M('mega', { color: '#0e7c86', roughness: 0.55 }), mb = M('mega', { color: '#1b1b1d' }), ms = M('mega', { color: '#c4c8cc', metalness: 0.85, roughness: 0.3 }), mk = M('mega', { color: '#1d4a9a' });
+  const z0 = 178, x0 = -50.8;
+  box('mega', x0, DESK, z0, 101.6, 1.6, 53.3, mt);
+  box('mega', x0 - 6, DESK + 1.6, z0 + 8, 16, 11, 12, ms);       // USB-B
+  box('mega', x0 - 2, DESK + 1.6, z0 + 36, 14, 11, 9, mb);       // power jack
+  box('mega', x0 + 52, DESK + 1.6, z0 + 18, 14, 1.3, 14, mb);    // ATmega2560
+  box('mega', x0 + 26, DESK + 1.6, z0 + 24, 7, 1.3, 7, mb);      // ATmega16U2
+  box('mega', x0 + 36, DESK + 1.6, z0 + 38, 5.5, 3.5, 3.2, ms);  // crystal
+  box('mega', x0 + 14, DESK + 1.6, z0 + 1.5, 70, 8.5, 2.6, mb);  // header rows
+  box('mega', x0 + 14, DESK + 1.6, z0 + 49.2, 70, 8.5, 2.6, mb);
+  box('mega', x0 + 92, DESK + 1.6, z0 + 3, 5.2, 8.5, 45.7, mb);
+  const lb = label('mega', ['Arduino Mega 2560'], 34, 5, null, '#e8f4f5'); lb.rotation.x = -Math.PI / 2; lb.position.set(x0 + 30, DESK + 1.7, z0 + 29);
+}
+
+// ------------------------------------------------------------------ update (everything that depends on the gap)
+let GAP = 26, path = null;
+const tmp = new THREE.Vector3();
+function tube(curvePts, r) { return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(curvePts.map(p => new THREE.Vector3(p[0], p[1], p[2]))), 40, r, 6, false); }
+function setGeo(m, g) { if (m.geometry) m.geometry.dispose(); m.geometry = g; }
+function update(g) {
+  GAP = g; const Pth = path = buildPath(g); const Lt = Pth.Lt, mid = Lt / 2;
+  mov.position.x = g;
+  setGeo(D.sample, ribbon(Pth, E, Lt - E, -25, 25, s => 0, null, 0.5));
+  setGeo(D.band1, ribbon(Pth, E, E + 6.5, -25, 25, s => 0.12));
+  setGeo(D.band2, ribbon(Pth, Lt - E - 6.5, Lt - E, -25, 25, s => 0.12));
+  setGeo(D.cell, ribbon(Pth, mid - 8, mid + 8, -5, 5, s => 0.12));
+  const zc = (s) => { const r = Math.abs(s - mid); return r <= 13 ? [0.96, 0.66, 0.1] : (r <= 23 ? [0.9, 0.42, 0.04] : [0.97, 0.78, 0.3]); };
+  // heater jog: d runs from 0.45 (on the face) up to 1.5 (nested) -- override with explicit formula
+  setGeo(D.heater, ribbon(Pth, 0, Lt, -27, 27, s => { const u = Math.min(s, Lt - s), t = Math.max(0, Math.min(1, (u - 1) / 5)); return 0.45 + 1.05 * t * t * (3 - 2 * t); }, zc, 0.5));
+  // heater tail: plane x = 0.45 on the fixed face, 11 wide, then folds down to the FFC connector
+  {
+    const rows = [], pos = [], idx = [];
+    const wp = [], P3 = [];
+    // centre line (x, y, z) and width direction (wx, wy, wz)
+    const cl = [];
+    for (let z = 25; z <= 92; z += 3) cl.push([0.45, 35.5, z, 0, 1, 0]);
+    const R = 7, cz = 92, cy = 36, yb = BT + 2.6 + 0.2 - 6.5;
+    // drop: quarter turn from running +z to running -y, then another to +z at the connector
+    const tgt = 0 - 0;
+    const xs = 0.45;
+    const drop = [[xs, 35.5, 92], [xs, 32, 99], [xs, 24, 103], [xs, 6, 105], [xs, -6, 106.5], [xs, BT + 4.5, 109], [xs, BT + 4.2, 118]];
+    const dir = [[0, 1, 0], [0.3, 0.9, 0], [0.8, 0.6, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]];
+    drop.forEach((p, i) => cl.push([p[0], p[1], p[2], dir[i][0], dir[i][1], dir[i][2]]));
+    // smooth through Catmull-Rom on centre line and widths
+    const cv = new THREE.CatmullRomCurve3(cl.map(c => new THREE.Vector3(c[0], c[1], c[2])));
+    const cw = new THREE.CatmullRomCurve3(cl.map(c => new THREE.Vector3(c[3], c[4], c[5])));
+    const n = 90;
+    for (let i = 0; i <= n; i++) { const t = i / n, p = cv.getPoint(t), w = cw.getPoint(t).normalize().multiplyScalar(5.5); pos.push(p.x - w.x, p.y - w.y, p.z - w.z, p.x + w.x, p.y + w.y, p.z + w.z); if (i) { const b = 2 * (i - 1); idx.push(b, b + 1, b + 2, b + 1, b + 3, b + 2); } }
+    setGeo(D.tail, mkgeo(pos, null, idx));
+  }
+  // contact tabs, 12 x 80, z 19..99
+  const zs = []; for (let z = 19; z <= 99.01; z += 2) zs.push(z);
+  const sHi = z => lin(8, 2, (z - 22) / 8), sLo = z => lin(-4, -10, (z - 22) / 8);
+  setGeo(D.tabL, patch(Pth, zs, sLo, sHi, 0.45, false, 10));
+  setGeo(D.tabR, patch(Pth, zs, sLo, sHi, 0.45, true, 10));
+  const padZ = [[19.4, 22.2], [92, 97]], padS = [[0.3, 3.6], [4.2, 7.5]], padT = [[-9, -5.5], [-4.5, -1]];
+  [[D.padsL, false], [D.padsR, true]].forEach(([arr, mir]) => {
+    let k = 0;
+    [[padZ[0], padS], [padZ[1], padT]].forEach(([zz, ss]) => ss.forEach(sr => { setGeo(arr[k++], patch(Pth, [zz[0], zz[1]], () => sr[0], () => sr[1], 0.55, mir, 4)); }));
+  });
+  // clips + leads: pad centres at z 94.5, s = -7.25 / -2.75
+  const jr = [[JACK[0], JACK[1]], [JACK[2], JACK[3]]];
+  [[false, 0], [true, 2]].forEach(([mir, base]) => [-7.25, -2.75].forEach((sc, k) => {
+    const sp = mir ? Lt - E - sc : E + sc, p = at(Pth, sp, 1.9);
+    const i = base + k, body = D.clipBody[i];
+    body.position.set(p.x, p.y, 94.5); body.rotation.z = Math.atan2(p.ty, p.tx) * 0;
+    const j = JACK[i], P0 = [p.x, p.y, 99.5], J = [KX - 4, JY, j[0]];
+    const m1 = [lin(P0[0], J[0], 0.25), P0[1] + 1, lin(P0[2], J[2], 0.3) + 4], m2 = [lin(P0[0], J[0], 0.62), Math.min(P0[1], J[1]) - 4, lin(P0[2], J[2], 0.7)];
+    setGeo(D.clipLead[i], tube([[p.x, p.y, 96], P0, m1, m2, J], 0.9));
+  }));
+  // light
+  D.beam.position.set(g / 2, 110, 0); D.beam.scale.set(g + 4, 70, 52);
+  D.arrows.forEach(a => a.position.set(g / 2, 150, a.position.z));
+  // chip and its leads
+  const pm = at(Pth, mid, -0.35), ang = Math.atan2(pm.ty, pm.tx);
+  chip.position.set(pm.x, pm.y, 16); chip.rotation.z = ang;
+  [0, 1].forEach(i => {
+    const sx = (i ? 1 : -1) * 0.6, ex = bx(20.85) + sx * 1.6, xm = pm.x + sx * 1.8;
+    const top = pm.y + 0.8;
+    setGeo(D.leadP[i], tube([[pm.x + sx, top, 16], [xm, top + 5, 26], [lin(xm, ex, 0.35), 96 + i, 76], [lin(xm, ex, 0.8), 70, 128], [ex, BT + 35, bz(48) + 1.6]], 0.3));
+  });
+  // anchors
+  const A = (id, x, y, z) => PARTS[id].anchor.set(x, y, z);
+  A('base', 60, DESK + 3, -70); A('fixed', -15, 78, -55); A('moving', g + 15, 78, -55); A('tape', 0.3, 53, 24);
+  const ap = at(Pth, mid, 0); A('sample', ap.x, ap.y + 4, -18); A('band', at(Pth, E + 3, 0).x, at(Pth, E + 3, 0).y + 6, 25);
+  A('cell', ap.x, ap.y, 4); A('heater', at(Pth, mid - 18, 1.5).x, at(Pth, mid - 18, 1.5).y - 3, 27);
+  A('tab', 0.8, 47, 80); A('clip', (KX) / 2, 40, 112); A('keithley', KX + 75, DESK + KH, 112);
+  A('pt100', pm.x, pm.y + 2, 16); A('max', bx(20.85), BT + 38, bz(48)); A('ctrl', bx(70), BT + 3, bz(30)); A('mega', 40, DESK + 12, 205); A('light', g / 2, 148, -22);
+  // live numbers
+  const Rtxt = (isFinite(Pth.R) && Pth.R < 60) ? '곡률반지름 약 ' + Pth.R.toFixed(0) + ' mm' : '평평';
+  const apex = Math.max.apply(null, Pth.P.slice(Math.round(E / Pth.ds), Pth.N - Math.round(E / Pth.ds)).map(p => p[1]));
+  document.getElementById('live').innerHTML = '판 간격 <b>' + g.toFixed(1) + ' mm</b> · ' + Rtxt + '<br>아치 꼭대기: 판 윗변에서 <b>' + (PH - apex).toFixed(0) + ' mm</b> 아래';
+  document.getElementById('gapv').textContent = g.toFixed(1) + ' mm';
+  document.getElementById('gap').value = g;
+  document.getElementById('b-flat').classList.toggle('act', Math.abs(g - 50) < 0.3);
+  document.getElementById('b-bent').classList.toggle('act', Math.abs(g - 26) < 0.3);
+  applyHL();
+}
+
+// ------------------------------------------------------------------ selection / visibility / badges
+let SEL = null, BADGES = true;
+function applyHL() {
+  ORDER.forEach(id => { const P = PARTS[id]; P.mats.forEach(m => {
+    const dim = SEL && SEL !== id;
+    m.transparent = dim ? true : m.userData.tr; m.opacity = dim ? Math.min(m.userData.op, 0.12) : m.userData.op;
+    m.depthWrite = !(dim || m.userData.tr);
+    if (m.emissive) m.emissive.setHex(SEL === id ? 0x552211 : 0x000000);
+  }); });
+  document.querySelectorAll('#pl li').forEach(li => li.classList.toggle('sel', li.dataset.id === SEL));
+  document.querySelectorAll('.badge').forEach(b => b.classList.toggle('on', b.dataset.id === SEL));
+}
+function select(id) {
+  SEL = (SEL === id) ? null : id;
+  const info = document.getElementById('info');
+  info.innerHTML = SEL ? '<b>' + PARTS[SEL].no + '. ' + PARTS[SEL].name + '</b><br>' + PARTS[SEL].note : '목록이나 모델에서 부품을 누르면 이름과 하는 일이 여기에 나옵니다.';
+  applyHL();
+}
+function setVis(id, v) { PARTS[id].vis = v; PARTS[id].meshes.forEach(m => m.visible = v); updBadges(); }
+const pl = document.getElementById('pl');
+ORDER.forEach(id => {
+  const P = PARTS[id], li = document.createElement('li'); li.dataset.id = id;
+  li.innerHTML = '<input type="checkbox" checked><span class="sw" style="background:' + P.color + '"></span><span class="no">' + P.no + '</span><span>' + P.name + '</span>';
+  li.querySelector('input').addEventListener('click', e => { e.stopPropagation(); setVis(id, e.target.checked); });
+  li.addEventListener('click', () => select(id)); pl.appendChild(li);
+  const b = document.createElement('div'); b.className = 'badge'; b.dataset.id = id; b.textContent = P.no; b.addEventListener('click', () => select(id)); stage.appendChild(b); P.badge = b;
+});
+function updBadges() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  ORDER.forEach(id => { const P = PARTS[id], b = P.badge;
+    if (!BADGES || !P.vis) { b.style.display = 'none'; return; }
+    tmp.copy(P.anchor).project(camera);
+    if (tmp.z > 1) { b.style.display = 'none'; return; }
+    b.style.display = 'block'; b.style.left = ((tmp.x + 1) / 2 * w) + 'px'; b.style.top = ((1 - tmp.y) / 2 * h) + 'px';
+  });
+}
+document.getElementById('b-badge').addEventListener('click', e => { BADGES = !BADGES; e.target.classList.toggle('act', BADGES); updBadges(); });
+
+// click picking
+const ray = new THREE.Raycaster(), mp = new THREE.Vector2(); let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 4) return;
+  const r = renderer.domElement.getBoundingClientRect();
+  mp.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  ray.setFromCamera(mp, camera);
+  const list = []; ORDER.forEach(id => { if (PARTS[id].vis) PARTS[id].meshes.forEach(m => list.push(m)); });
+  const hit = ray.intersectObjects(list, false).filter(h => h.object.userData.part !== 'light' && h.object.material.opacity > 0.2);
+  if (hit.length) select(hit[0].object.userData.part);
+});
+
+// ------------------------------------------------------------------ views, gap control
+const VIEWS = {
+  side: { t: [14, 48, 0], p: [14, 58, -330] },
+  top: { t: [60, 0, 95], p: [60, 720, 97] },
+  iso: { t: [55, 15, 85], p: [330, 270, -260] },
+  all: { t: [70, 10, 100], p: [330, 300, 640] }
+};
+function view(n) { const v = VIEWS[n]; controls.target.set.apply(controls.target, v.t); camera.position.set.apply(camera.position, v.p); if (camera.aspect < 1) { const k = Math.pow(1 / camera.aspect, 0.8); camera.position.sub(controls.target).multiplyScalar(k).add(controls.target); } controls.update(); }
+document.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => view(b.dataset.v)));
+let tw = null;
+function goGap(g) { const g0 = GAP, t0 = performance.now(); tw = t => { const f = Math.min(1, (t - t0) / 700), e = f * f * (3 - 2 * f); update(g0 + (g - g0) * e); if (f >= 1) tw = null; }; }
+document.getElementById('b-flat').addEventListener('click', () => goGap(50));
+document.getElementById('b-bent').addEventListener('click', () => goGap(26));
+document.getElementById('gap').addEventListener('input', e => { tw = null; update(parseFloat(e.target.value)); });
+
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+window.addEventListener('resize', resize);
+function loop(t) { if (tw) tw(t); controls.update(); renderer.render(scene, camera); updBadges(); requestAnimationFrame(loop); }
+
+// hash options for previews: #view=side&g=26&sel=heater&badge=0
+const H = {}; location.hash.slice(1).split('&').forEach(kv => { const a = kv.split('='); if (a[0]) H[a[0]] = decodeURIComponent(a[1] || ''); });
+resize(); update(H.g ? parseFloat(H.g) : 26); view(H.view || 'iso');
+if (H.sel && PARTS[H.sel]) select(H.sel);
+if (H.hide) H.hide.split(',').forEach(id => PARTS[id] && setVis(id, false));
+if (H.badge === '0') { BADGES = false; document.getElementById('b-badge').classList.remove('act'); }
+if (H.cam) { const c = H.cam.split(',').map(Number); camera.position.set(c[0], c[1], c[2]); controls.target.set(c[3], c[4], c[5]); controls.update(); }
+document.getElementById('msg').style.display = H.msg === '0' ? 'none' : 'block';
+requestAnimationFrame(loop);
+window.__fes = { update, select, view };
+})();
+</script>
+</body>
+</html>
