@@ -26,3 +26,11 @@ v3.3에서 바뀐 것: SHT45를 셀 밖 배기 T관(PETG, 관으로 40 mm 아래
 2026-11-05: 빔라인 셀의 최신 판(v4.8)은 별도 페이지 https://donghyeonlee98.github.io/beamline-cell-3d/ 에서 본다. 이 페이지의 v3.3 모델은 이전 판 기록이다. jig_models.js가 15.6 MB라 v4.8 GLB를 더 넣지 못했다.
 
 2026-11-12: 빔라인 셀 최신 판은 v8.2b r8(발주 세트 r8, 문제점 표시)이다: https://donghyeonlee98.github.io/beamline-cell-3d/v82r8.html (첫 화면도 같은 내용). 이전 판은 v6.2c https://donghyeonlee98.github.io/beamline-cell-3d/v62c.html , v4.8 https://donghyeonlee98.github.io/beamline-cell-3d/v48.html 에 남겨 두었다.
+
+## 싱글셀 4셀 지그 · 포스트 판 rev 4 (2026-11-22)
+
+`s4cell.html`: 25 × 25 mm 유리 4장을 간격 30 mm로 놓고 뚜껑 4장(자석)으로 누르는 4셀 지그. 아래 PCB O9C_S4A_BP4(110 × 162, 포고핀 32개, 토글 16개, 포스트 JB-601 8개, 납땜 패드 W 8개) + 본체 + 뚜껑(손잡이 턱, 유리 1.1 t용) + 바닥판 + 나일론 볼트·다리.
+
+- 끌어서 회전, 분해 슬라이더, 뚜껑 들기 슬라이더, 부품 분류별 켜기/끄기, 부품을 누르면 이름. 휴대폰 폭에서도 본다.
+- 형상은 STEP과 같은 치수의 설계용 모델이다(제작도 아님). 포스트·토글·납땜 선의 겉모양은 보기용이고, 바나나 플러그(Pomona B-36)와 W 패드 납땜 선의 치수는 가정이라 플러그는 기본으로 꺼 두었다.
+- 모델은 `s4cell.glb`(약 3 MB, 파일로 따로 불러옴), 부품 목록은 `s4cell_parts.json`이다.

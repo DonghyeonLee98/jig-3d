@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>싱글셀 4셀 지그 3D (포스트 판 rev 4)</title>
+<style>
+  :root { --ink:#1d2a33; --mut:#5b6b75; --line:#d5dde2; --acc:#1f6b45; --bg:#f4f6f7; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'IBM Plex Sans KR', 'Malgun Gothic', system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+  header { padding:10px 14px; background:#fff; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:6px 14px; align-items:baseline; }
+  header h1 { font-size:16px; margin:0; }
+  header a { font-size:13px; color:var(--acc); }
+  #wrap { display:flex; flex-wrap:wrap; gap:0; }
+  #stage { position:relative; flex:1 1 560px; min-height:420px; height:calc(100vh - 52px); background:linear-gradient(#e9eef1,#cfd8de); }
+  #stage canvas { display:block; width:100%; height:100%; touch-action:none; }
+  #msg { position:absolute; left:10px; bottom:10px; right:10px; font-size:12px; color:#fff; background:rgba(20,30,36,.78); padding:6px 9px; border-radius:6px; pointer-events:none; }
+  #panel { flex:0 0 330px; max-width:100%; padding:12px 14px 30px; background:#fff; border-left:1px solid var(--line); overflow:auto; max-height:calc(100vh - 52px); }
+  #panel h2 { font-size:13px; margin:14px 0 6px; color:var(--mut); letter-spacing:.02em; }
+  .row { display:flex; align-items:center; gap:8px; font-size:13px; margin:5px 0; }
+  .row input[type=range] { flex:1; }
+  .grp label { display:flex; align-items:center; gap:7px; font-size:13px; padding:3px 0; }
+  .sw { width:12px; height:12px; border-radius:3px; border:1px solid #0003; flex:0 0 auto; }
+  button { font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; }
+  button:active { background:#e8eef1; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; }
+  .note { font-size:12px; color:var(--mut); line-height:1.55; }
+  .note b { color:var(--ink); }
+  @media (max-width: 760px) {
+    #stage { flex-basis:100%; height:62vh; min-height:340px; }
+    #panel { flex-basis:100%; border-left:none; border-top:1px solid var(--line); max-height:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>싱글셀 4셀 지그 3D · 포스트 판 rev 4</h1>
+  <a href="index.html">← 측정 지그 3D 첫 화면</a>
+</header>
+<div id="wrap">
+  <div id="stage"><div id="msg">모델 불러오는 중 (약 3 MB)…</div></div>
+  <div id="panel">
+    <h2>분해 · 뚜껑 열기</h2>
+    <div class="row"><span style="width:64px">분해</span><input id="ex" type="range" min="0" max="100" value="0"><span id="exv" style="width:34px;text-align:right">0 %</span></div>
+    <div class="row"><span style="width:64px">뚜껑 들기</span><input id="lo" type="range" min="0" max="45" value="0"><span id="lov" style="width:34px;text-align:right">0</span></div>
+    <div class="btns" style="margin-top:6px">
+      <button id="b-asm">조립</button><button id="b-open">뚜껑 15 mm</button><button id="b-exp">분해 100 %</button>
+      <button id="b-v1">비스듬히</button><button id="b-v2">위에서</button><button id="b-v3">옆에서</button>
+    </div>
+    <h2>부품 켜기 / 끄기</h2>
+    <div class="grp" id="grp"></div>
+    <h2>누른 부품</h2>
+    <div class="note" id="info">부품을 누르면 이름이 여기에 나옵니다.</div>
+    <h2>설명</h2>
+    <div class="note">
+      자리 4곳(간격 30 mm)에 25 × 25 mm 유리를 놓고, 뚜껑 4장이 자석으로 덮어 누른다. 아래 PCB <b>O9C_S4A_BP4</b>(A용; 에기연용 BP4도 본체·뚜껑·바닥판은 같음)에 포고핀 32개, 토글 16개, 포스트 JB-601 8개가 있다.<br><br>
+      <b>고정:</b> 나일론 M3 × 12 볼트 4개 (±43, ±18)가 본체 → PCB → 바닥판을 꿰고 바닥판 아래 육각 너트 자리에서 조인다. 다리 M6 스탠드오프 4개는 바닥판 아래에 있다.<br><br>
+      형상은 STEP과 같은 치수의 설계용 모델이다(제작도 아님). 포스트·토글·플러그·납땜 선의 겉모양은 보기용이고, <b>플러그(Pomona B-36)와 W 패드 납땜 선의 치수는 가정</b>이다. 플러그는 기본으로 꺼 두었다.
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+(function () {
+  THREE.Object3D.DefaultUp.set(0, 0, 1);
+  const stage = document.getElementById('stage');
+  const msg = document.getElementById('msg');
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  stage.insertBefore(renderer.domElement, msg);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, 1, 1, 3000);
+  camera.up.set(0, 0, 1);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a0, 0.75));
+  const d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(120, -200, 300); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0xffffff, 0.35); d2.position.set(-200, 150, 80); scene.add(d2);
+
+  // explode offsets along z (mm) per move layer
+  const EXP = { lid: 52, mag_lid: 52, mask: 36, glass: 28, body: 14, mag_body: 14, pogo: 8, pcb: 0, post: 0, toggle: 0, post_nut: -10, wpad: -10, base: -24, bolt_nut: -36, leg: -50, bolt: 64, plug: 0 };
+  const LABEL = { body: '본체', lid: '뚜껑 4장', base: '바닥판', pcb: '아래 PCB', glass: '유리 4장', mask: '측정 마스크 4장', pogo: '포고핀 32개', toggle: '토글 16개', post: '포스트 JB-601 8개', bolt: '볼트·너트 (M3)', leg: '다리 4개 (M6)', mag: '자석 16개', wpad: 'W 패드 납땜 선 (가정)', plug: '바나나 플러그 (가정)' };
+  const ORDER = ['lid', 'mag', 'glass', 'mask', 'body', 'pogo', 'toggle', 'post', 'pcb', 'wpad', 'base', 'bolt', 'leg', 'plug'];
+  const OFF = { plug: true };
+  const items = [];            // {mesh, meta, z0}
+  const groups = {};
+  let selected = null;
+
+  function fit() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', fit); fit();
+
+  function view(n) {
+    const t = new THREE.Vector3(0, 6, 0);
+    const wide = stage.clientWidth / Math.max(stage.clientHeight, 1) < 1.1 ? 1.45 : 1.0;
+    let p;
+    if (n === 1) p = [120, -200, 160];
+    else if (n === 2) p = [0, -1, 330];
+    else p = [0, -330, 30];
+    camera.position.set(t.x + p[0] * wide, t.y + p[1] * wide, t.z + p[2] * wide);
+    controls.target.copy(t); controls.update();
+  }
+
+  function apply() {
+    const e = +document.getElementById('ex').value / 100, lo = +document.getElementById('lo').value;
+    document.getElementById('exv').textContent = Math.round(e * 100) + ' %';
+    document.getElementById('lov').textContent = lo;
+    for (const it of items) {
+      const m = it.meta.move;
+      let dz = (EXP[m] || 0) * e;
+      if (m === 'lid' || m === 'mag_lid') dz += lo;
+      it.mesh.position.z = dz;
+    }
+  }
+  ['ex', 'lo'].forEach(id => document.getElementById(id).addEventListener('input', apply));
+  document.getElementById('b-asm').onclick = () => { ex.value = 0; lo.value = 0; apply(); };
+  document.getElementById('b-open').onclick = () => { ex.value = 0; lo.value = 15; apply(); };
+  document.getElementById('b-exp').onclick = () => { ex.value = 100; lo.value = 0; apply(); };
+  document.getElementById('b-v1').onclick = () => view(1);
+  document.getElementById('b-v2').onclick = () => view(2);
+  document.getElementById('b-v3').onclick = () => view(3);
+
+  function buildUI() {
+    const box = document.getElementById('grp');
+    ORDER.forEach(g => {
+      if (!groups[g]) return;
+      const l = document.createElement('label');
+      const c = document.createElement('input'); c.type = 'checkbox'; c.checked = !OFF[g];
+      const s = document.createElement('span'); s.className = 'sw'; s.style.background = groups[g].color;
+      l.appendChild(c); l.appendChild(s); l.appendChild(document.createTextNode(LABEL[g]));
+      box.appendChild(l);
+      const set = () => items.forEach(it => { if (it.meta.group === g) it.mesh.visible = c.checked; });
+      c.addEventListener('change', set); set();
+    });
+  }
+
+  fetch('s4cell_parts.json').then(r => r.json()).then(metas => {
+    const byId = {}; metas.forEach(m => { byId[m.id] = m; });
+    const loader = new THREE.GLTFLoader();
+    loader.load('s4cell.glb', gltf => {
+      gltf.scene.traverse(o => {
+        if (!o.isMesh) return;
+        const meta = byId[o.name] || byId[(o.parent || {}).name];
+        if (!meta) return;
+        o.material.flatShading = true; o.material.metalness = Math.min(o.material.metalness || 0, 0.25); o.material.needsUpdate = true;
+        if (o.material.transparent) o.material.depthWrite = false;
+        o.userData.meta = meta;
+        items.push({ mesh: o, meta });
+        const g = groups[meta.group] || (groups[meta.group] = { n: 0, color: meta.color });
+        g.n++;
+      });
+      scene.add(gltf.scene);
+      buildUI(); apply(); view(1);
+      msg.textContent = '끌어서 돌리기 · 두 손가락으로 확대/이동 · 부품을 누르면 이름 표시';
+      setTimeout(() => { msg.style.display = 'none'; }, 6000);
+    }, undefined, err => { msg.textContent = '모델을 불러오지 못했습니다: ' + err; });
+  }).catch(err => { msg.textContent = '부품 목록을 불러오지 못했습니다: ' + err; });
+
+  // pick
+  const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+  let down = null;
+  renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+  renderer.domElement.addEventListener('pointerup', e => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+    const r = renderer.domElement.getBoundingClientRect();
+    ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ptr, camera);
+    const hit = ray.intersectObjects(items.filter(i => i.mesh.visible).map(i => i.mesh), false)[0];
+    if (selected) { selected.material.emissive && selected.material.emissive.setHex(0x000000); selected = null; }
+    if (hit) {
+      selected = hit.object; selected.material.emissive && selected.material.emissive.setHex(0x333300);
+      document.getElementById('info').textContent = selected.userData.meta.label;
+    } else document.getElementById('info').textContent = '부품을 누르면 이름이 여기에 나옵니다.';
+  });
+  (function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+  window.__s4 = { camera, controls, view, apply, items };
+})();
+</script>
+</body>
+</html>
