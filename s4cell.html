@@ -54,7 +54,7 @@
     <h2>설명</h2>
     <div class="note">
       자리 4곳(간격 30 mm)에 25 × 25 mm 유리를 놓고, 뚜껑 4장이 자석으로 덮어 누른다. 아래 PCB <b>O9C_S4A_BP5</b>(120 × 162, A용; 에기연용 BP5도 본체·뚜껑·바닥판은 같음)에 포고핀 32개, 토글 16개, 포스트 JB-601 8개, 납땜 패드 W 8개가 있다.<br><br>
-      <b>고정:</b> 바닥판은 두께 8 mm로 아랫면이 평평하고(다리 없음), 포스트 나사 끝·너트는 위가 열린 주머니 안에 잠긴다. 나일론 M3 × 10 볼트 4개 (±43, ±18)가 본체 → PCB → 바닥판을, M3 × 8 볼트 + 와셔 4개 (±56, 58.5 / −66)가 PCB 가장자리 → 바닥판을 바닥판 안의 M3 열삽입 인서트(총 8개)에 조인다.<br><br>
+      <b>고정:</b> 바닥판은 두께 8 mm이고 다리가 없다. 포스트 줄 아래는 넓은 직사각 주머니 하나(깊이 6.5)이고 포스트 나사 끝·너트·W 납땜 꼬리가 그 안에 들어가며, 받침 기둥 6개가 PCB를 받친다. 나일론 M3 × 12 볼트 4개 (±43, ±18)가 본체 → PCB → 바닥판을, M3 × 10 볼트 + 와셔 2장 4개 (±56, 58.5 / −66)가 PCB 가장자리 → 바닥판을 조이고, 모두 바닥판 아랫면의 M3 육각 너트 자리(8곳)에서 너트로 받는다.<br><br>
       형상은 STEP과 같은 치수의 설계용 모델이다(제작도 아님). 포스트·토글·플러그·납땜 선의 겉모양은 보기용이고, <b>플러그(Pomona B-36)와 W 패드 납땜 선의 치수는 가정</b>이다. 플러그는 기본으로 꺼 두었다.
     </div>
   </div>
@@ -81,8 +81,8 @@
 
   // explode offsets along z (mm) per move layer
   const EXP = { lid: 52, mag_lid: 52, mask: 36, glass: 28, body: 14, mag_body: 14, pogo: 8, pcb: 0, post: 0, toggle: 0, post_nut: -10, wpad: -10, base: -34, washer: 40, bolt: 64, plug: 0 };
-  const LABEL = { body: '본체', lid: '뚜껑 4장', base: '바닥판', pcb: '아래 PCB', glass: '유리 4장', mask: '측정 마스크 4장', pogo: '포고핀 32개', toggle: '토글 16개', post: '포스트 JB-601 8개', bolt: '볼트 8개·와셔 4개 (M3 나일론)', insert: '열삽입 인서트 8개 (바닥판 안)', mag: '자석 16개', wpad: 'W 패드 납땜 선 (가정)', plug: '바나나 플러그 (가정)' };
-  const ORDER = ['lid', 'mag', 'glass', 'mask', 'body', 'pogo', 'toggle', 'post', 'pcb', 'wpad', 'base', 'insert', 'bolt', 'plug'];
+  const LABEL = { body: '본체', lid: '뚜껑 4장', base: '바닥판', pcb: '아래 PCB', glass: '유리 4장', mask: '측정 마스크 4장', pogo: '포고핀 32개', toggle: '토글 16개', post: '포스트 JB-601 8개', bolt: '볼트 8개·와셔 8개·너트 8개 (M3)', mag: '자석 16개', wpad: 'W 패드 납땜 선 (가정)', plug: '바나나 플러그 (가정)' };
+  const ORDER = ['lid', 'mag', 'glass', 'mask', 'body', 'pogo', 'toggle', 'post', 'pcb', 'wpad', 'base', 'bolt', 'plug'];
   const OFF = { plug: true };
   const items = [];            // {mesh, meta, z0}
   const groups = {};
