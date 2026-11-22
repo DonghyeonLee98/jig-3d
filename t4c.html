@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>탠덤 4셀 지그 T4C 3D (검토용, 출력·주문 전)</title>
+<style>
+  :root { --ink:#1d2a33; --mut:#5b6b75; --line:#d5dde2; --acc:#1f6b45; --bg:#f4f6f7; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:'IBM Plex Sans KR', 'Malgun Gothic', system-ui, sans-serif; color:var(--ink); background:var(--bg); }
+  header { padding:10px 14px; background:#fff; border-bottom:1px solid var(--line); display:flex; flex-wrap:wrap; gap:6px 14px; align-items:baseline; }
+  header h1 { font-size:16px; margin:0; }
+  header a { font-size:13px; color:var(--acc); }
+  .tag { font-size:12px; font-weight:700; color:#8a2a12; background:#fde9e2; border:1px solid #f0b9a8; border-radius:5px; padding:2px 7px; }
+  #wrap { display:flex; flex-wrap:wrap; gap:0; }
+  #stage { position:relative; flex:1 1 560px; min-height:420px; height:calc(100vh - 52px); background:linear-gradient(#e9eef1,#cfd8de); }
+  #stage canvas { display:block; width:100%; height:100%; touch-action:none; }
+  #msg { position:absolute; left:10px; bottom:10px; right:10px; font-size:12px; color:#fff; background:rgba(20,30,36,.78); padding:6px 9px; border-radius:6px; pointer-events:none; }
+  #panel { flex:0 0 340px; max-width:100%; padding:12px 14px 30px; background:#fff; border-left:1px solid var(--line); overflow:auto; max-height:calc(100vh - 52px); }
+  #panel h2 { font-size:13px; margin:14px 0 6px; color:var(--mut); letter-spacing:.02em; }
+  .row { display:flex; align-items:center; gap:8px; font-size:13px; margin:5px 0; }
+  .row input[type=range] { flex:1; }
+  .grp label { display:flex; align-items:center; gap:7px; font-size:13px; padding:3px 0; }
+  .sw { width:12px; height:12px; border-radius:3px; border:1px solid #0003; flex:0 0 auto; }
+  button { font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--line); background:#fff; border-radius:6px; cursor:pointer; }
+  button:active { background:#e8eef1; }
+  .btns { display:flex; flex-wrap:wrap; gap:6px; }
+  .note { font-size:12px; color:var(--mut); line-height:1.55; }
+  .note b { color:var(--ink); }
+  table.dim { border-collapse:collapse; width:100%; font-size:12px; }
+  table.dim td { border-bottom:1px solid var(--line); padding:3px 4px; vertical-align:top; }
+  table.dim td:first-child { color:var(--mut); width:42%; }
+  @media (max-width: 760px) {
+    #stage { flex-basis:100%; height:62vh; min-height:340px; }
+    #panel { flex-basis:100%; border-left:none; border-top:1px solid var(--line); max-height:none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>탠덤 4셀 지그 T4C 3D</h1>
+  <span class="tag">검토용, 출력·주문 전</span>
+  <a href="index.html">← 측정 지그 3D 첫 화면</a>
+</header>
+<div id="wrap">
+  <div id="stage"><div id="msg">모델 불러오는 중 (약 2 MB)…</div></div>
+  <div id="panel">
+    <h2>펼침 · 뚜껑 들기</h2>
+    <div class="row"><span style="width:64px">펼침</span><input id="ex" type="range" min="0" max="100" value="0"><span id="exv" style="width:34px;text-align:right">0 %</span></div>
+    <div class="row"><span style="width:64px">뚜껑 들기</span><input id="lo" type="range" min="0" max="45" value="0"><span id="lov" style="width:34px;text-align:right">0</span></div>
+    <div class="btns" style="margin-top:6px">
+      <button id="b-asm">조립</button><button id="b-open">뚜껑 들기 20 mm</button><button id="b-exp">펼침 100 %</button>
+      <button id="b-v1">비스듬히</button><button id="b-v2">위에서</button><button id="b-v3">옆에서</button>
+    </div>
+    <h2>부품 켜기 / 끄기</h2>
+    <div class="grp" id="grp"></div>
+    <h2>누른 부품</h2>
+    <div class="note" id="info">부품을 누르면 이름이 여기에 나옵니다.</div>
+    <h2>주요 치수 (mm)</h2>
+    <table class="dim">
+      <tr><td>자리 간격</td><td><b>31</b> (자리 4곳, 2 × 2)</td></tr>
+      <tr><td>웨이퍼</td><td>25.0 × 25.0 × 0.30, 주머니 25.2</td></tr>
+      <tr><td>눌림 (공칭)</td><td>앞 <b>0.60</b> · 뒤 <b>0.35</b> · 연결 <b>0.65</b> (최악 0.15–1.05 / 0.15–0.55 / 0.15–1.15, 한도 1.40)</td></tr>
+      <tr><td>뚜껑 PCB</td><td>74 × 74 × 1.6, 뚜껑 밑면 z 8.35</td></tr>
+      <tr><td>아래 판 PCB</td><td>184.4 × 137.0 × 1.6</td></tr>
+      <tr><td>몸체</td><td>86.8 × 86.8 × 8.35</td></tr>
+      <tr><td>바닥판</td><td>194.4 × 147.0 × 8.0</td></tr>
+      <tr><td>핀</td><td>스프링 핀 40개 = 뒤 16 + 앞 16 + 연결 8</td></tr>
+      <tr><td>뚜껑 열기</td><td>수직으로 4.7 mm 이상 (볼트 끝 4.65, 맞춤핀 4.15)</td></tr>
+    </table>
+    <h2>설명</h2>
+    <div class="note">
+      <b>검토용입니다. 출력·주문 전이고 실물 시험을 하지 않았습니다.</b> 자리 4곳(간격 31 mm)에 웨이퍼를 놓고, 뚜껑 PCB 한 장(74 × 74)이 네 자리를 한꺼번에 덮는다. 앞핀 16개는 뚜껑에, 뒷핀 16개와 연결 핀 8개는 아래 판에 꽂혀 있다. 연결 핀은 뚜껑 쪽 황동 기둥 8개와 닿아 앞면 신호를 아래 판으로 내린다.<br><br>
+      <b>고정:</b> 가운데 볼트 M3 × 20 한 개를 손잡이로 조이고, 맞춤핀 2개(둥근 구멍 D1, 긴 구멍 D2)가 뚜껑 방향을 잡는다. 몸체는 귀 볼트 4개, 아래 판은 모서리 볼트 4개로 바닥판에 고정하고 너트는 바닥판 아랫면에 있다. 자석·인서트·자리별 나사는 없다.<br><br>
+      <b>검사 (CAD):</b> 부품 156개, 간섭 0쌍, 뚜껑을 수직으로 들 때 간섭 0. 핀이 뚜껑을 미는 힘은 합계 최악 약 20 N이라 손잡이는 25 N 이상으로 조이는 것을 권장한다.<br><br>
+      <b>가정·미확인 (일부):</b> 가운데 볼트 머리를 M3 육각 머리로 그렸고(둥근 머리면 알려 주세요), 손잡이 높이·너트 자리·맞춤핀 구멍 끼움은 시험 출력이 필요하다. 몸체 바깥 76.8 □와 귀, 집게 자리 위치, 바닥판 창 벌어짐(45°)은 설계 쪽에서 고른 값이다. 스프링 핀 꼬리 2.5 mm, 받침 기둥이 닿는 PCB 아랫면 구리 노출부는 미확인이다. 색은 보기 좋게 고른 것이고 실제 색이 아니다.
+    </div>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+<script>
+(function () {
+  THREE.Object3D.DefaultUp.set(0, 0, 1);
+  const stage = document.getElementById('stage');
+  const msg = document.getElementById('msg');
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  stage.insertBefore(renderer.domElement, msg);
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(38, 1, 1, 4000);
+  camera.up.set(0, 0, 1);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8a96a0, 0.8));
+  const d1 = new THREE.DirectionalLight(0xffffff, 0.8); d1.position.set(150, -250, 350); scene.add(d1);
+  const d2 = new THREE.DirectionalLight(0xffffff, 0.4); d2.position.set(-250, 150, 100); scene.add(d2);
+
+  // explode offsets along z (mm) per move layer; LIFT = layers that follow the lid-lift slider (handle runs at 2x so it clears the bolt first)
+  const EXP = { lid: 64, pillar: 54, pwasher: 58, pscrew: 70, handle: 95, hnut: 100, wafer: 24, body: 14, ebolt: 34, bbolt: 34, pcblow: 0, base: -40 };
+  const LIFT = { lid: 1, pillar: 1, pwasher: 1, pscrew: 1, handle: 2, hnut: 2 };
+  const LABEL = { body: '몸체', base: '바닥판', pcblow: '아래 판 PCB (십자 창, 포스트 16)', wafer: '웨이퍼 4장', rpin: '뒷핀 16개', fpin: '앞핀 16개', lpin: '연결 핀 8개',
+    pillar: '황동 기둥 8개 (와셔·나사 포함)', lid: '뚜껑 PCB 74 × 74', dowel: '맞춤핀 2개', centre: '가운데 볼트 + 손잡이', bolts: '귀·모서리 볼트, 와셔, 너트', post: '바인딩 포스트 JB-601 16개', misc: '헤더·NTC' };
+  const ORDER = ['lid', 'fpin', 'pillar', 'centre', 'dowel', 'wafer', 'body', 'lpin', 'rpin', 'pcblow', 'post', 'misc', 'base', 'bolts'];
+  const items = [];
+  const groups = {};
+  let selected = null;
+
+  function fit() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', fit); fit();
+
+  function view(n) {
+    const t = new THREE.Vector3(0, -24, 0);
+    const asp = stage.clientWidth / Math.max(stage.clientHeight, 1);
+    const k = asp < 1.1 ? Math.min(3.2, 1.1 / Math.max(asp, 0.3)) : 1.0;
+    let p;
+    if (n === 1) p = [150, -270, 200];
+    else if (n === 2) p = [0, -1, 400];
+    else p = [0, -420, 40];
+    camera.position.set(t.x + p[0] * k, t.y + p[1] * k, t.z + p[2] * k);
+    controls.target.copy(t); controls.update();
+  }
+
+  function apply() {
+    const e = +document.getElementById('ex').value / 100, lo = +document.getElementById('lo').value;
+    document.getElementById('exv').textContent = Math.round(e * 100) + ' %';
+    document.getElementById('lov').textContent = lo;
+    for (const it of items) {
+      const m = it.meta.move;
+      it.mesh.position.z = (EXP[m] || 0) * e + (LIFT[m] || 0) * lo;
+    }
+  }
+  ['ex', 'lo'].forEach(id => document.getElementById(id).addEventListener('input', apply));
+  document.getElementById('b-asm').onclick = () => { ex.value = 0; lo.value = 0; apply(); };
+  document.getElementById('b-open').onclick = () => { ex.value = 0; lo.value = 20; apply(); };
+  document.getElementById('b-exp').onclick = () => { ex.value = 100; lo.value = 0; apply(); };
+  document.getElementById('b-v1').onclick = () => view(1);
+  document.getElementById('b-v2').onclick = () => view(2);
+  document.getElementById('b-v3').onclick = () => view(3);
+
+  function buildUI() {
+    const box = document.getElementById('grp');
+    ORDER.forEach(g => {
+      if (!groups[g]) return;
+      const l = document.createElement('label');
+      const c = document.createElement('input'); c.type = 'checkbox'; c.checked = true;
+      const s = document.createElement('span'); s.className = 'sw'; s.style.background = groups[g].color;
+      l.appendChild(c); l.appendChild(s); l.appendChild(document.createTextNode(LABEL[g] + ' (' + groups[g].n + ')'));
+      box.appendChild(l);
+      const set = () => items.forEach(it => { if (it.meta.group === g) it.mesh.visible = c.checked; });
+      c.addEventListener('change', set); set();
+    });
+  }
+
+  fetch('t4c_parts.json').then(r => r.json()).then(metas => {
+    const byId = {}; metas.forEach(m => { byId[m.id] = m; });
+    const loader = new THREE.GLTFLoader();
+    loader.load('t4c.glb', gltf => {
+      gltf.scene.traverse(o => {
+        if (!o.isMesh) return;
+        const meta = byId[o.name] || byId[(o.parent || {}).name];
+        if (!meta) return;
+        o.material.flatShading = true; o.material.metalness = Math.min(o.material.metalness || 0, 0.25); o.material.needsUpdate = true;
+        o.userData.meta = meta;
+        items.push({ mesh: o, meta });
+        const g = groups[meta.group] || (groups[meta.group] = { n: 0, color: meta.color });
+        g.n++;
+      });
+      scene.add(gltf.scene);
+      buildUI(); apply(); view(1);
+      msg.textContent = '끌어서 돌리기 · 두 손가락으로 확대/이동 · 부품을 누르면 이름 표시';
+      setTimeout(() => { msg.style.display = 'none'; }, 6000);
+    }, undefined, err => { msg.textContent = '모델을 불러오지 못했습니다: ' + err; });
+  }).catch(err => { msg.textContent = '부품 목록을 불러오지 못했습니다: ' + err; });
+
+  const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+  let down = null;
+  renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+  renderer.domElement.addEventListener('pointerup', e => {
+    if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
+    const r = renderer.domElement.getBoundingClientRect();
+    ptr.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    ray.setFromCamera(ptr, camera);
+    const hit = ray.intersectObjects(items.filter(i => i.mesh.visible).map(i => i.mesh), false)[0];
+    if (selected) { selected.material.emissive && selected.material.emissive.setHex(0x000000); selected = null; }
+    if (hit) {
+      selected = hit.object; selected.material.emissive && selected.material.emissive.setHex(0x333300);
+      document.getElementById('info').textContent = selected.userData.meta.label;
+    } else document.getElementById('info').textContent = '부품을 누르면 이름이 여기에 나옵니다.';
+  });
+  (function loop() { requestAnimationFrame(loop); controls.update(); renderer.render(scene, camera); })();
+  window.__t4c = { camera, controls, view, apply, items };
+})();
+</script>
+</body>
+</html>
